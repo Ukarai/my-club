@@ -1,12 +1,20 @@
 import { createServerFn } from "@tanstack/react-start"
 import { requireRole } from "./auth"
 import { all, get, run, tx } from "./db"
-import { SKILL_NOTE_KINDS, SKILL_STATUSES, hasRole, today } from "@/lib/domain"
+import {
+  GROUP_COLORS,
+  SKILL_NOTE_KINDS,
+  SKILL_STATUSES,
+  hasRole,
+  today,
+} from "@/lib/domain"
 import type {
   CompTask,
   Competition,
   CompetitionSummary,
   Entry,
+  Group,
+  GroupSummary,
   Gymnast,
   GymnastEntry,
   GymnastSkill,
@@ -89,15 +97,22 @@ export const listGymnasts = createServerFn({ method: "GET" }).handler(
   async () => {
     requireRole("viewer")
     // The list never needs contact or medical details, so they're never sent.
-    return all<GymnastSummary>(
+    const rows = all<
+      Omit<GymnastSummary, "group_ids"> & { group_list: string | null }
+    >(
       `SELECT g.id, g.first_name, g.last_name, g.date_of_birth, g.squad, g.level, g.active,
       g.created_at, NULL AS guardian_contact, NULL AS medical_info,
       (SELECT count(*) FROM gymnast_skills x WHERE x.gymnast_id = g.id AND x.status IN ('independent','in_routine')) AS independent_count,
       (SELECT count(*) FROM gymnast_skills x WHERE x.gymnast_id = g.id AND x.status NOT IN ('independent','in_routine')) AS in_progress_count,
       (SELECT count(*) FROM targets t WHERE t.gymnast_id = g.id AND t.status = 'active') AS active_targets,
-      (SELECT count(*) FROM notes n WHERE n.gymnast_id = g.id AND n.category = 'injury' AND n.resolved = 0) AS open_injuries
+      (SELECT count(*) FROM notes n WHERE n.gymnast_id = g.id AND n.category = 'injury' AND n.resolved = 0) AS open_injuries,
+      (SELECT group_concat(m.group_id) FROM group_members m WHERE m.gymnast_id = g.id) AS group_list
      FROM gymnasts g ORDER BY g.active DESC, g.last_name, g.first_name`
     )
+    return rows.map(({ group_list, ...r }): GymnastSummary => ({
+      ...r,
+      group_ids: group_list ? group_list.split(",").map(Number) : [],
+    }))
   }
 )
 
@@ -144,6 +159,11 @@ export const getGymnast = createServerFn({ method: "GET" })
                 e.status, e.score, e.placing
          FROM competition_entries e JOIN competitions c ON c.id = e.competition_id
          WHERE e.gymnast_id = ? ORDER BY c.start_date DESC`,
+        id
+      ),
+      groups: all<Group & { member: number }>(
+        `SELECT gr.*, EXISTS (SELECT 1 FROM group_members m WHERE m.group_id = gr.id AND m.gymnast_id = ?) AS member
+         FROM club_groups gr ORDER BY gr.name`,
         id
       ),
     }
@@ -723,6 +743,130 @@ export const deleteTask = createServerFn({ method: "POST" })
     run("DELETE FROM competition_tasks WHERE id = ?", id)
   })
 
+// ───────────────────────────── Groups ─────────────────────────────
+
+export const listGroups = createServerFn({ method: "GET" }).handler(
+  async () => {
+    requireRole("viewer")
+    return all<GroupSummary>(
+      `SELECT gr.*,
+        (SELECT count(*) FROM group_members m JOIN gymnasts g ON g.id = m.gymnast_id
+           WHERE m.group_id = gr.id AND g.active = 1) AS member_count
+       FROM club_groups gr ORDER BY gr.name`
+    )
+  }
+)
+
+export type GroupMember = {
+  id: number
+  first_name: string
+  last_name: string
+  date_of_birth: string | null
+  squad: string | null
+  level: string | null
+  active: number
+  added_on: string
+  independent_count: number
+  active_targets: number
+  open_injuries: number
+}
+
+export const getGroup = createServerFn({ method: "GET" })
+  .validator(input<number>())
+  .handler(async ({ data: id }) => {
+    requireRole("viewer")
+    const group = get<Group>("SELECT * FROM club_groups WHERE id = ?", id)
+    if (!group) throw new Error("Group not found")
+    return {
+      group,
+      members: all<GroupMember>(
+        `SELECT g.id, g.first_name, g.last_name, g.date_of_birth, g.squad, g.level, g.active, m.added_on,
+          (SELECT count(*) FROM gymnast_skills x WHERE x.gymnast_id = g.id AND x.status IN ('independent','in_routine')) AS independent_count,
+          (SELECT count(*) FROM targets t WHERE t.gymnast_id = g.id AND t.status = 'active') AS active_targets,
+          (SELECT count(*) FROM notes n WHERE n.gymnast_id = g.id AND n.category = 'injury' AND n.resolved = 0) AS open_injuries
+         FROM group_members m JOIN gymnasts g ON g.id = m.gymnast_id
+         WHERE m.group_id = ? ORDER BY g.active DESC, g.last_name, g.first_name`,
+        id
+      ),
+      gymnasts: all<Pick<Gymnast, "id" | "first_name" | "last_name" | "squad">>(
+        "SELECT id, first_name, last_name, squad FROM gymnasts WHERE active = 1 ORDER BY last_name, first_name"
+      ),
+    }
+  })
+
+export type GroupInput = {
+  id?: number
+  name: string
+  description?: string | null
+  color?: string | null
+}
+
+export const saveGroup = createServerFn({ method: "POST" })
+  .validator(input<GroupInput>())
+  .handler(async ({ data: d }) => {
+    requireRole("coach")
+    const name = d.name.trim()
+    if (!name) throw new Error("Group needs a name")
+    const color = GROUP_COLORS.find((c) => c === d.color) ?? "sky"
+    const clash = get<{ id: number }>(
+      "SELECT id FROM club_groups WHERE name = ? AND id != ?",
+      name,
+      d.id ?? 0
+    )
+    if (clash) throw new Error(`There's already a group called "${name}"`)
+    if (d.id) {
+      run(
+        "UPDATE club_groups SET name = ?, description = ?, color = ? WHERE id = ?",
+        name,
+        blank(d.description),
+        color,
+        d.id
+      )
+      return d.id
+    }
+    return run(
+      "INSERT INTO club_groups (name, description, color) VALUES (?, ?, ?)",
+      name,
+      blank(d.description),
+      color
+    )
+  })
+
+export const deleteGroup = createServerFn({ method: "POST" })
+  .validator(input<number>())
+  .handler(async ({ data: id }) => {
+    requireRole("coach")
+    // Members are only unlinked (ON DELETE CASCADE); gymnasts are untouched.
+    run("DELETE FROM club_groups WHERE id = ?", id)
+  })
+
+export const addGroupMembers = createServerFn({ method: "POST" })
+  .validator(input<{ groupId: number; gymnastIds: number[] }>())
+  .handler(async ({ data: d }) => {
+    requireRole("coach")
+    const t = today()
+    tx(() => {
+      for (const gid of d.gymnastIds)
+        run(
+          "INSERT INTO group_members (group_id, gymnast_id, added_on) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+          d.groupId,
+          gid,
+          t
+        )
+    })
+  })
+
+export const removeGroupMember = createServerFn({ method: "POST" })
+  .validator(input<{ groupId: number; gymnastId: number }>())
+  .handler(async ({ data: d }) => {
+    requireRole("coach")
+    run(
+      "DELETE FROM group_members WHERE group_id = ? AND gymnast_id = ?",
+      d.groupId,
+      d.gymnastId
+    )
+  })
+
 // ───────────────────────────── Demo data ─────────────────────────────
 
 export const loadDemoData = createServerFn({ method: "POST" }).handler(
@@ -962,6 +1106,36 @@ export const loadDemoData = createServerFn({ method: "POST" }).handler(
         "Book coach / judge for the day",
         "Head coach"
       )
+
+      const groups: [string, string, string, number[]][] = [
+        ["Tuesday 5pm", "Tuesday evening session, main hall", "sky", [1, 3, 4]],
+        [
+          "Thursday 6pm",
+          "Thursday evening session, main hall",
+          "emerald",
+          [0, 2],
+        ],
+        [
+          "Regional squad",
+          "Gymnasts working towards regional grades",
+          "violet",
+          [0, 2, 4],
+        ],
+      ]
+      for (const [name, description, color, members] of groups) {
+        const gid = run(
+          "INSERT INTO club_groups (name, description, color) VALUES (?, ?, ?)",
+          name,
+          description,
+          color
+        )
+        for (const i of members)
+          run(
+            "INSERT INTO group_members (group_id, gymnast_id) VALUES (?, ?)",
+            gid,
+            ids[i]
+          )
+      }
 
       run(
         `INSERT INTO competitions (name, start_date, venue, level, status) VALUES (?, ?, ?, ?, 'planning')`,

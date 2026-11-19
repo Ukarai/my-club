@@ -17,6 +17,8 @@ import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as CompetitionsIndexRouteImport } from './routes/competitions/index'
 import { Route as CompetitionsCompetitionIdRouteImport } from './routes/competitions/$competitionId'
+import { Route as GroupsIndexRouteImport } from './routes/groups/index'
+import { Route as GroupsGroupIdRouteImport } from './routes/groups/$groupId'
 import { Route as GymnastsIndexRouteImport } from './routes/gymnasts/index'
 import { Route as GymnastsGymnastIdRouteImport } from './routes/gymnasts/$gymnastId'
 
@@ -61,6 +63,16 @@ const CompetitionsCompetitionIdRoute =
     path: '/competitions/$competitionId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const GroupsIndexRoute = GroupsIndexRouteImport.update({
+  id: '/groups/',
+  path: '/groups/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupsGroupIdRoute = GroupsGroupIdRouteImport.update({
+  id: '/groups/$groupId',
+  path: '/groups/$groupId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GymnastsIndexRoute = GymnastsIndexRouteImport.update({
   id: '/gymnasts/',
   path: '/gymnasts/',
@@ -80,8 +92,10 @@ export interface FileRoutesByFullPath {
   '/skills': typeof SkillsRoute
   '/users': typeof UsersRoute
   '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
+  '/groups/$groupId': typeof GroupsGroupIdRoute
   '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
   '/competitions/': typeof CompetitionsIndexRoute
+  '/groups/': typeof GroupsIndexRoute
   '/gymnasts/': typeof GymnastsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -92,8 +106,10 @@ export interface FileRoutesByTo {
   '/skills': typeof SkillsRoute
   '/users': typeof UsersRoute
   '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
+  '/groups/$groupId': typeof GroupsGroupIdRoute
   '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
   '/competitions': typeof CompetitionsIndexRoute
+  '/groups': typeof GroupsIndexRoute
   '/gymnasts': typeof GymnastsIndexRoute
 }
 export interface FileRoutesById {
@@ -105,8 +121,10 @@ export interface FileRoutesById {
   '/skills': typeof SkillsRoute
   '/users': typeof UsersRoute
   '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
+  '/groups/$groupId': typeof GroupsGroupIdRoute
   '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
   '/competitions/': typeof CompetitionsIndexRoute
+  '/groups/': typeof GroupsIndexRoute
   '/gymnasts/': typeof GymnastsIndexRoute
 }
 export interface FileRouteTypes {
@@ -119,8 +137,10 @@ export interface FileRouteTypes {
     | '/skills'
     | '/users'
     | '/competitions/$competitionId'
+    | '/groups/$groupId'
     | '/gymnasts/$gymnastId'
     | '/competitions/'
+    | '/groups/'
     | '/gymnasts/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -131,8 +151,10 @@ export interface FileRouteTypes {
     | '/skills'
     | '/users'
     | '/competitions/$competitionId'
+    | '/groups/$groupId'
     | '/gymnasts/$gymnastId'
     | '/competitions'
+    | '/groups'
     | '/gymnasts'
   id:
     | '__root__'
@@ -143,8 +165,10 @@ export interface FileRouteTypes {
     | '/skills'
     | '/users'
     | '/competitions/$competitionId'
+    | '/groups/$groupId'
     | '/gymnasts/$gymnastId'
     | '/competitions/'
+    | '/groups/'
     | '/gymnasts/'
   fileRoutesById: FileRoutesById
 }
@@ -156,8 +180,10 @@ export interface RootRouteChildren {
   SkillsRoute: typeof SkillsRoute
   UsersRoute: typeof UsersRoute
   CompetitionsCompetitionIdRoute: typeof CompetitionsCompetitionIdRoute
+  GroupsGroupIdRoute: typeof GroupsGroupIdRoute
   GymnastsGymnastIdRoute: typeof GymnastsGymnastIdRoute
   CompetitionsIndexRoute: typeof CompetitionsIndexRoute
+  GroupsIndexRoute: typeof GroupsIndexRoute
   GymnastsIndexRoute: typeof GymnastsIndexRoute
 }
 
@@ -219,6 +245,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CompetitionsCompetitionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/groups/': {
+      id: '/groups/'
+      path: '/groups'
+      fullPath: '/groups/'
+      preLoaderRoute: typeof GroupsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/groups/$groupId': {
+      id: '/groups/$groupId'
+      path: '/groups/$groupId'
+      fullPath: '/groups/$groupId'
+      preLoaderRoute: typeof GroupsGroupIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gymnasts/': {
       id: '/gymnasts/'
       path: '/gymnasts'
@@ -244,8 +284,10 @@ const rootRouteChildren: RootRouteChildren = {
   SkillsRoute: SkillsRoute,
   UsersRoute: UsersRoute,
   CompetitionsCompetitionIdRoute: CompetitionsCompetitionIdRoute,
+  GroupsGroupIdRoute: GroupsGroupIdRoute,
   GymnastsGymnastIdRoute: GymnastsGymnastIdRoute,
   CompetitionsIndexRoute: CompetitionsIndexRoute,
+  GroupsIndexRoute: GroupsIndexRoute,
   GymnastsIndexRoute: GymnastsIndexRoute,
 }
 export const routeTree = rootRouteImport

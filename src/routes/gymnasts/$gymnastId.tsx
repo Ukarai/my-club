@@ -13,17 +13,20 @@ import {
   Crosshair,
   MessageSquareText,
   Pencil,
+  Plus,
   RotateCcw,
   Trash2,
   X,
 } from "lucide-react"
 import { cn } from "cn"
 import {
+  addGroupMembers,
   deleteGymnast,
   deleteNote,
   deleteSkillNote,
   deleteTarget,
   getGymnast,
+  removeGroupMember,
   saveNote,
   saveSkillNote,
   saveTarget,
@@ -40,6 +43,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   EntryStatusBadge,
+  GroupBadge,
   InjuryBadge,
   NoteCategoryBadge,
   SKILL_STATUS_STYLES,
@@ -134,6 +138,7 @@ function GymnastPage() {
               .filter(Boolean)
               .join(" · ") || "No details yet"}
           </p>
+          <GymnastGroups data={data} />
         </div>
         <div className={cn("flex gap-2", !canEdit && "hidden")}>
           <Button variant="outline" onClick={edit.show}>
@@ -223,6 +228,99 @@ function GymnastPage() {
         onOpenChange={edit.onOpenChange}
         gymnast={g}
       />
+    </div>
+  )
+}
+
+// ───────────────────────────── Groups ─────────────────────────────
+
+function GymnastGroups({ data }: { data: Data }) {
+  const router = useRouter()
+  const canEdit = useCan("coach")
+  const gymnastId = data.gymnast.id
+  const member = data.groups.filter((gr) => gr.member)
+  const others = data.groups.filter((gr) => !gr.member)
+  const [adding, setAdding] = React.useState(false)
+
+  const add = useAction(async (groupId: number) => {
+    await addGroupMembers({ data: { groupId, gymnastIds: [gymnastId] } })
+    await router.invalidate()
+    setAdding(false)
+  })
+  const remove = useAction(async (groupId: number) => {
+    await removeGroupMember({ data: { groupId, gymnastId } })
+    await router.invalidate()
+  })
+
+  if (!member.length && !canEdit) return null
+  return (
+    <div className="flex flex-col gap-1 pt-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="sr-only">Groups:</span>
+        {member.map((gr) => (
+          <span key={gr.id} className="inline-flex items-center">
+            <Link
+              to="/groups/$groupId"
+              params={{ groupId: String(gr.id) }}
+              className="rounded-2xl hover:opacity-80"
+            >
+              <GroupBadge name={gr.name} color={gr.color} />
+            </Link>
+            {canEdit && (
+              <button
+                type="button"
+                className="-ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                aria-label={`Remove from ${gr.name}`}
+                disabled={remove.pending}
+                onClick={() => remove.run(gr.id)}
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </span>
+        ))}
+        {canEdit &&
+          (adding ? (
+            <NativeSelect
+              autoFocus
+              className="h-6 w-auto rounded-xl px-2 text-xs md:text-xs"
+              aria-label="Add to group"
+              defaultValue=""
+              disabled={add.pending}
+              onBlur={() => !add.pending && setAdding(false)}
+              onKeyDown={(e) => e.key === "Escape" && setAdding(false)}
+              onChange={(e) =>
+                e.target.value && add.run(Number(e.target.value))
+              }
+            >
+              <option value="" disabled>
+                Choose a group…
+              </option>
+              {others.map((gr) => (
+                <option key={gr.id} value={gr.id}>
+                  {gr.name}
+                </option>
+              ))}
+            </NativeSelect>
+          ) : others.length > 0 ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              className="text-muted-foreground"
+              onClick={() => setAdding(true)}
+            >
+              <Plus /> Add to group
+            </Button>
+          ) : data.groups.length === 0 ? (
+            <Link
+              to="/groups"
+              className="text-xs text-muted-foreground hover:underline"
+            >
+              Create a group…
+            </Link>
+          ) : null)}
+      </div>
+      <FormError error={add.error ?? remove.error} />
     </div>
   )
 }

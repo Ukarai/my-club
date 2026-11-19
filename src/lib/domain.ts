@@ -51,6 +51,28 @@ export const SKILL_NOTE_KINDS = [
 ] as const
 export type SkillNoteKind = (typeof SKILL_NOTE_KINDS)[number]["value"]
 
+export const GROUP_COLORS = [
+  "sky",
+  "emerald",
+  "amber",
+  "rose",
+  "violet",
+  "teal",
+  "orange",
+  "slate",
+] as const
+export type GroupColor = (typeof GROUP_COLORS)[number]
+
+export type Group = {
+  id: number
+  name: string
+  description: string | null
+  color: GroupColor
+  created_at: string
+}
+
+export type GroupSummary = Group & { member_count: number }
+
 export const TARGET_STATUSES = [
   { value: "active", label: "Active" },
   { value: "achieved", label: "Achieved" },
@@ -143,6 +165,7 @@ export type GymnastSummary = Gymnast & {
   in_progress_count: number
   active_targets: number
   open_injuries: number
+  group_ids: number[]
 }
 
 export type Skill = {

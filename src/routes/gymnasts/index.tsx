@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
-import { listGymnasts } from "@/server/functions"
+import { listGroups, listGymnasts } from "@/server/functions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -13,19 +13,26 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { EmptyState, NativeSelect } from "@/components/form"
-import { InjuryBadge } from "@/components/badges"
+import { GroupDot, InjuryBadge } from "@/components/badges"
 import { GymnastDialog, useDialog } from "@/components/gymnast-form"
 import { ageFrom } from "@/lib/domain"
 import { useCan } from "@/lib/use-user"
 
 export const Route = createFileRoute("/gymnasts/")({
-  loader: () => listGymnasts(),
+  validateSearch: (s: Record<string, unknown>): { group?: number } =>
+    Number(s.group) > 0 ? { group: Number(s.group) } : {},
+  loader: async () => {
+    const [gymnasts, groups] = await Promise.all([listGymnasts(), listGroups()])
+    return { gymnasts, groups }
+  },
   component: Gymnasts,
 })
 
 function Gymnasts() {
-  const gymnasts = Route.useLoaderData()
+  const { gymnasts, groups } = Route.useLoaderData()
+  const { group } = Route.useSearch()
   const navigate = useNavigate()
+  const groupById = new Map(groups.map((gr) => [gr.id, gr]))
   const dialog = useDialog()
   const canEdit = useCan("coach")
   const [query, setQuery] = React.useState("")
@@ -40,6 +47,7 @@ function Gymnasts() {
     (g) =>
       (showArchived || g.active) &&
       (!squad || g.squad === squad) &&
+      (!group || g.group_ids.includes(group)) &&
       `${g.first_name} ${g.last_name} ${g.level ?? ""}`
         .toLowerCase()
         .includes(q)
@@ -77,6 +85,27 @@ function Gymnasts() {
             <option key={s}>{s}</option>
           ))}
         </NativeSelect>
+        {groups.length > 0 && (
+          <NativeSelect
+            className="w-auto"
+            value={group ?? ""}
+            onChange={(e) =>
+              navigate({
+                to: "/gymnasts",
+                search: e.target.value ? { group: Number(e.target.value) } : {},
+                replace: true,
+              })
+            }
+            aria-label="Filter by group"
+          >
+            <option value="">All groups</option>
+            {groups.map((gr) => (
+              <option key={gr.id} value={gr.id}>
+                {gr.name}
+              </option>
+            ))}
+          </NativeSelect>
+        )}
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <input
             type="checkbox"
@@ -131,6 +160,19 @@ function Gymnasts() {
                       {!g.active && (
                         <span className="text-xs text-muted-foreground">
                           archived
+                        </span>
+                      )}
+                      {g.group_ids.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          {g.group_ids.map((id) => {
+                            const gr = groupById.get(id)
+                            return gr ? (
+                              <span key={id} title={gr.name}>
+                                <GroupDot color={gr.color} className="size-2" />
+                                <span className="sr-only">{gr.name}</span>
+                              </span>
+                            ) : null
+                          })}
                         </span>
                       )}
                     </div>

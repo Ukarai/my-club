@@ -7,6 +7,7 @@ A web app for trampoline clubs to track their gymnasts' progress and manage comp
 - **Gymnasts**: profiles with squad, level, guardian contact and medical info. Gymnasts can be archived to keep their history.
 - **Skills**: each gymnast's status on every skill in the club catalogue: *Learning → With support → Without support → Independent → In routine*. Every change is logged in the gymnast's History tab.
 - **Skill notes**: per-gymnast notes on any skill, either a *current focus* (e.g. "keep head up for longer on take-off") or a *coaching point* to remember. Current focuses show under the skill name and in a summary at the top of the Skills tab. Marking a note done keeps it as history.
+- **Groups**: custom groups of gymnasts (training sessions, competition teams, ability groups…), each with a colour and description. A gymnast can be in any number of groups. Add gymnasts from the group's page or from the gymnast's header, and filter the gymnast list by group. Deleting a group doesn't affect the gymnasts in it.
 - **Training notes**: dated notes by type (general, injury, coaching, achievement). Injury notes stay open until marked resolved, and open injuries are flagged on the dashboard.
 - **Targets**: free-text or skill-linked targets with due dates. A skill-linked target is marked achieved automatically when the skill reaches the goal status.
 - **Competitions**: upcoming and past events, each with its own management page:
@@ -34,7 +35,7 @@ Everyone signs in with an email and password. Admins add people on the **Users**
 | Role | Can |
 | --- | --- |
 | **Admin** | Everything, including managing users, editing the skill catalogue and deleting gymnasts or competitions |
-| **Coach** | Record skill progress, notes and targets; add and edit gymnasts and competitions; manage entries, routines, tasks and results |
+| **Coach** | Record skill progress, notes and targets; add and edit gymnasts, groups and competitions; manage entries, routines, tasks and results |
 | **Viewer** | Read-only. Guardian contact and medical details are hidden (injury notes are still visible) |
 
 - New users get a temporary password from an admin and can change it under **Your account**. There is no email-based reset: if someone forgets their password, an admin resets it on the Users page.

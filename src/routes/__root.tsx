@@ -9,6 +9,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import {
+  Layers,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -77,6 +78,7 @@ export const Route = createRootRoute({
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/gymnasts", label: "Gymnasts", icon: Users, exact: false },
+  { to: "/groups", label: "Groups", icon: Layers, exact: false },
   { to: "/skills", label: "Skills", icon: ListChecks, exact: false },
   { to: "/competitions", label: "Competitions", icon: Trophy, exact: false },
 ] as const

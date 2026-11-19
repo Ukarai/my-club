@@ -51,6 +51,24 @@ CREATE TABLE IF NOT EXISTS skill_history (
   note TEXT
 );
 
+-- Custom groups (training sessions, comp teams, ability groups...).
+-- Named club_groups because GROUPS is an SQL keyword.
+CREATE TABLE IF NOT EXISTS club_groups (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  description TEXT,
+  color TEXT NOT NULL DEFAULT 'sky',
+  created_at TEXT NOT NULL DEFAULT (date('now'))
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+  group_id INTEGER NOT NULL REFERENCES club_groups(id) ON DELETE CASCADE,
+  gymnast_id INTEGER NOT NULL REFERENCES gymnasts(id) ON DELETE CASCADE,
+  added_on TEXT NOT NULL DEFAULT (date('now')),
+  PRIMARY KEY (group_id, gymnast_id)
+);
+CREATE INDEX IF NOT EXISTS group_members_gymnast ON group_members (gymnast_id);
+
 -- Coaching notes about one skill for one gymnast (focus points, cues)
 CREATE TABLE IF NOT EXISTS skill_notes (
   id INTEGER PRIMARY KEY,
