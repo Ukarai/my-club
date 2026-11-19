@@ -3,6 +3,7 @@ import { all, get, run, tx } from "./db"
 import {
   AuthError,
   checkLockout,
+  checkSetupCode,
   clearFailures,
   currentUser,
   endAllSessionsFor,
@@ -10,6 +11,7 @@ import {
   hashPassword,
   recordFailure,
   requireRole,
+  setupCode,
   startSession,
   verifyAgainstDummy,
   verifyPassword,
@@ -57,7 +59,10 @@ const adminCount = () =>
 export const getSession = createServerFn({ method: "GET" }).handler(
   async () => {
     ensureTestAccounts()
-    return { user: currentUser(), needsSetup: userCount() === 0 }
+    const needsSetup = userCount() === 0
+    // Makes sure a generated setup code has been printed to the log.
+    if (needsSetup) setupCode()
+    return { user: currentUser(), needsSetup }
   }
 )
 
@@ -98,8 +103,18 @@ export const testLogin = createServerFn({ method: "POST" })
   })
 
 export const createFirstAdmin = createServerFn({ method: "POST" })
-  .validator(input<{ name: string; email: string; password: string }>())
+  .validator(
+    input<{
+      setupCode: string
+      name: string
+      email: string
+      password: string
+    }>()
+  )
   .handler(async ({ data: d }) => {
+    // Only someone who can see the server (its log or its settings) can
+    // create the first admin.
+    checkSetupCode(d.setupCode)
     checkPassword(d.password)
     const email = cleanEmail(d.email)
     if (!d.name.trim()) throw new Error("Enter your name")

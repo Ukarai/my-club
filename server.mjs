@@ -7,6 +7,8 @@
 //   PORT          port to listen on (default 3000)
 //   HOST          interface to bind (default: all)
 //   CLUB_DB_PATH  SQLite database file (default data/club.db)
+//   CLUB_SETUP_CODE  code needed to create the first admin (default: random,
+//                    printed to the log)
 import { serve } from "srvx"
 import { staticMiddleware } from "srvx/static"
 
@@ -35,4 +37,10 @@ serve({
         : files(req, next),
   ],
   fetch: app.fetch,
+})
+
+// Warm up: opens the database (applying any schema changes) before the first
+// visitor arrives and, on a fresh install, prints the setup code to the log.
+await app.fetch(new Request("http://localhost/")).catch((e) => {
+  console.error("Warm-up request failed:", e)
 })

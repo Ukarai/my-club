@@ -89,7 +89,21 @@ club.example.org {
 
 ### First run
 
-Open the site and create the admin account **straight away**. Until the first admin exists, anyone who can reach the site can claim that account. If you want to be careful, create it through an SSH tunnel (`ssh -L 3000:127.0.0.1:3000 your-server`, then open http://localhost:3000) before opening the site up through the proxy.
+A new install asks for a **setup code** before it will create the first admin account, so only someone with access to the server can claim the club. When the app starts with no accounts, it prints the code to its log:
+
+```bash
+docker compose logs app    # or wherever your process manager writes output
+```
+
+```
+  ┌─ No admin account yet ──────────────────────────────
+  │ To set up the club, open /setup and enter this code:
+  │
+  │     7KQM-X2RD-WN4P-HC9T
+  ...
+```
+
+Open the site, enter the code along with your name, email and password, and you're the admin. The code is random, changes each time the app restarts, and isn't needed again once the first admin exists. To choose your own code instead, set `CLUB_SETUP_CODE` to a value of at least 12 characters; shorter values are ignored.
 
 The development test accounts and their password-free sign-in don't exist in production builds.
 
@@ -100,6 +114,7 @@ The development test accounts and their password-free sign-in don't exist in pro
 | `PORT` | `3000` | Port to listen on |
 | `HOST` | all interfaces | Interface to bind, e.g. `127.0.0.1` |
 | `CLUB_DB_PATH` | `data/club.db` (`/app/data/club.db` in Docker) | Database file |
+| `CLUB_SETUP_CODE` | random, printed to the log | Code needed to create the first admin (12+ characters) |
 | `CLUB_BACKUP_DIR` | `backups/` next to the database | Where `pnpm backup` writes |
 | `CLUB_BACKUP_KEEP` | `14` | How many backups to keep |
 

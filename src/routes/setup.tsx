@@ -16,7 +16,12 @@ function SetupPage() {
     const v = formValues(form)
     if (v.password !== v.confirm) throw new Error("Passwords don't match")
     await createFirstAdmin({
-      data: { name: v.name, email: v.email, password: v.password },
+      data: {
+        setupCode: v.setup_code,
+        name: v.name,
+        email: v.email,
+        password: v.password,
+      },
     })
     await router.invalidate()
     await router.history.push("/")
@@ -34,8 +39,23 @@ function SetupPage() {
           submit.run(e.currentTarget)
         }}
       >
+        <Field label="Setup code" htmlFor="setup_code">
+          <Input
+            id="setup_code"
+            name="setup_code"
+            autoComplete="off"
+            spellCheck={false}
+            aria-describedby="setup_code_hint"
+            required
+            autoFocus
+          />
+          <p id="setup_code_hint" className="text-xs text-muted-foreground">
+            Printed in the server&apos;s log when the app starts, or the value
+            of <code>CLUB_SETUP_CODE</code> if you set one.
+          </p>
+        </Field>
         <Field label="Your name" htmlFor="name">
-          <Input id="name" name="name" autoComplete="name" required autoFocus />
+          <Input id="name" name="name" autoComplete="name" required />
         </Field>
         <Field label="Email" htmlFor="email">
           <Input
