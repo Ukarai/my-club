@@ -8,44 +8,229 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root"
-import { Route as IndexRouteImport } from "./routes/index"
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as CompetitionsIndexRouteImport } from './routes/competitions/index'
+import { Route as CompetitionsCompetitionIdRouteImport } from './routes/competitions/$competitionId'
+import { Route as GymnastsIndexRouteImport } from './routes/gymnasts/index'
+import { Route as GymnastsGymnastIdRouteImport } from './routes/gymnasts/$gymnastId'
 
 const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkillsRoute = SkillsRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompetitionsIndexRoute = CompetitionsIndexRouteImport.update({
+  id: '/competitions/',
+  path: '/competitions/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompetitionsCompetitionIdRoute =
+  CompetitionsCompetitionIdRouteImport.update({
+    id: '/competitions/$competitionId',
+    path: '/competitions/$competitionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const GymnastsIndexRoute = GymnastsIndexRouteImport.update({
+  id: '/gymnasts/',
+  path: '/gymnasts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GymnastsGymnastIdRoute = GymnastsGymnastIdRouteImport.update({
+  id: '/gymnasts/$gymnastId',
+  path: '/gymnasts/$gymnastId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  "/": typeof IndexRoute
+  '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
+  '/skills': typeof SkillsRoute
+  '/users': typeof UsersRoute
+  '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
+  '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
+  '/competitions/': typeof CompetitionsIndexRoute
+  '/gymnasts/': typeof GymnastsIndexRoute
 }
 export interface FileRoutesByTo {
-  "/": typeof IndexRoute
+  '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
+  '/skills': typeof SkillsRoute
+  '/users': typeof UsersRoute
+  '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
+  '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
+  '/competitions': typeof CompetitionsIndexRoute
+  '/gymnasts': typeof GymnastsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  "/": typeof IndexRoute
+  '/': typeof IndexRoute
+  '/account': typeof AccountRoute
+  '/login': typeof LoginRoute
+  '/setup': typeof SetupRoute
+  '/skills': typeof SkillsRoute
+  '/users': typeof UsersRoute
+  '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
+  '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
+  '/competitions/': typeof CompetitionsIndexRoute
+  '/gymnasts/': typeof GymnastsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: "/"
+  fullPaths:
+    | '/'
+    | '/account'
+    | '/login'
+    | '/setup'
+    | '/skills'
+    | '/users'
+    | '/competitions/$competitionId'
+    | '/gymnasts/$gymnastId'
+    | '/competitions/'
+    | '/gymnasts/'
   fileRoutesByTo: FileRoutesByTo
-  to: "/"
-  id: "__root__" | "/"
+  to:
+    | '/'
+    | '/account'
+    | '/login'
+    | '/setup'
+    | '/skills'
+    | '/users'
+    | '/competitions/$competitionId'
+    | '/gymnasts/$gymnastId'
+    | '/competitions'
+    | '/gymnasts'
+  id:
+    | '__root__'
+    | '/'
+    | '/account'
+    | '/login'
+    | '/setup'
+    | '/skills'
+    | '/users'
+    | '/competitions/$competitionId'
+    | '/gymnasts/$gymnastId'
+    | '/competitions/'
+    | '/gymnasts/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
+  LoginRoute: typeof LoginRoute
+  SetupRoute: typeof SetupRoute
+  SkillsRoute: typeof SkillsRoute
+  UsersRoute: typeof UsersRoute
+  CompetitionsCompetitionIdRoute: typeof CompetitionsCompetitionIdRoute
+  GymnastsGymnastIdRoute: typeof GymnastsGymnastIdRoute
+  CompetitionsIndexRoute: typeof CompetitionsIndexRoute
+  GymnastsIndexRoute: typeof GymnastsIndexRoute
 }
 
-declare module "@tanstack/react-router" {
+declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    "/": {
-      id: "/"
-      path: "/"
-      fullPath: "/"
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills': {
+      id: '/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof SkillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/competitions/': {
+      id: '/competitions/'
+      path: '/competitions'
+      fullPath: '/competitions/'
+      preLoaderRoute: typeof CompetitionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/competitions/$competitionId': {
+      id: '/competitions/$competitionId'
+      path: '/competitions/$competitionId'
+      fullPath: '/competitions/$competitionId'
+      preLoaderRoute: typeof CompetitionsCompetitionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gymnasts/': {
+      id: '/gymnasts/'
+      path: '/gymnasts'
+      fullPath: '/gymnasts/'
+      preLoaderRoute: typeof GymnastsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gymnasts/$gymnastId': {
+      id: '/gymnasts/$gymnastId'
+      path: '/gymnasts/$gymnastId'
+      fullPath: '/gymnasts/$gymnastId'
+      preLoaderRoute: typeof GymnastsGymnastIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -53,14 +238,23 @@ declare module "@tanstack/react-router" {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
+  LoginRoute: LoginRoute,
+  SetupRoute: SetupRoute,
+  SkillsRoute: SkillsRoute,
+  UsersRoute: UsersRoute,
+  CompetitionsCompetitionIdRoute: CompetitionsCompetitionIdRoute,
+  GymnastsGymnastIdRoute: GymnastsGymnastIdRoute,
+  CompetitionsIndexRoute: CompetitionsIndexRoute,
+  GymnastsIndexRoute: GymnastsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
-import type { getRouter } from "./router.tsx"
-import type { createStart } from "@tanstack/react-start"
-declare module "@tanstack/react-start" {
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
