@@ -115,7 +115,11 @@ CREATE TABLE IF NOT EXISTS competitions (
   entry_deadline TEXT,
   entry_fee REAL,
   status TEXT NOT NULL DEFAULT 'planning',
-  notes TEXT
+  notes TEXT,
+  -- When set, only admins can change routine cards for this competition
+  routines_locked INTEGER NOT NULL DEFAULT 0,
+  routines_locked_by TEXT,
+  routines_locked_on TEXT
 );
 
 CREATE TABLE IF NOT EXISTS competition_entries (
@@ -199,6 +203,25 @@ function migrate(conn: DatabaseSync) {
     for (const [name, from, to] of TARIFF_UPDATES_2025)
       update.run(to, name, from)
     conn.exec("PRAGMA user_version = 1")
+  }
+  if (version < 2) {
+    // Routine locking. Fresh databases already have these from SCHEMA.
+    const cols = new Set(
+      (
+        conn.prepare("PRAGMA table_info(competitions)").all() as {
+          name: string
+        }[]
+      ).map((c) => c.name)
+    )
+    if (!cols.has("routines_locked"))
+      conn.exec(
+        "ALTER TABLE competitions ADD COLUMN routines_locked INTEGER NOT NULL DEFAULT 0"
+      )
+    if (!cols.has("routines_locked_by"))
+      conn.exec("ALTER TABLE competitions ADD COLUMN routines_locked_by TEXT")
+    if (!cols.has("routines_locked_on"))
+      conn.exec("ALTER TABLE competitions ADD COLUMN routines_locked_on TEXT")
+    conn.exec("PRAGMA user_version = 2")
   }
 }
 

@@ -12,7 +12,7 @@ A web app for trampoline clubs to track their gymnasts' progress and manage comp
 - **Targets**: free-text or skill-linked targets with due dates. A skill-linked target is marked achieved automatically when the skill reaches the goal status.
 - **Competitions**: upcoming and past events, each with its own management page:
   - **Entries**: entry status, category and fee-paid tracking
-  - **Routines**: two 10-skill routine cards per gymnast, with total tariff and warnings for repeated skills or skills not yet independent
+  - **Routines**: two 10-skill routine cards per gymnast, with total tariff and warnings for repeated skills or skills not yet independent. Coaches can edit them until an admin locks the competition's routines (e.g. once cards are submitted)
   - **Tasks**: club checklist (submit entries, collect fees, book judges…)
   - **Results**: scores, placings and notes
 - **Skill catalogue**: about 35 starter skills with default tariffs. You can edit, add and remove skills.
@@ -34,8 +34,8 @@ Everyone signs in with an email and password. Admins add people on the **Users**
 
 | Role | Can |
 | --- | --- |
-| **Admin** | Everything, including managing users, editing the skill catalogue, deleting gymnasts, and all competition management: details, entries, fees, routines, tasks and results |
-| **Coach** | Record skill progress, notes and targets; add and edit gymnasts and groups. Competitions are view-only |
+| **Admin** | Everything, including managing users, editing the skill catalogue, deleting gymnasts, and all competition management: details, entries, fees, routines (including locking them), tasks and results |
+| **Coach** | Record skill progress, notes and targets; add and edit gymnasts and groups; edit routine cards unless an admin has locked them. Otherwise competitions are view-only |
 | **Viewer** | Read-only. Guardian contact and medical details are hidden (injury notes are still visible) |
 
 - New users get a temporary password from an admin and can change it under **Your account**. There is no email-based reset: if someone forgets their password, an admin resets it on the Users page.

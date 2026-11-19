@@ -697,6 +697,56 @@ export const updateEntry = createServerFn({ method: "POST" })
     )
   })
 
+/**
+ * Routine cards are the one part of a competition coaches can edit, unless
+ * an admin has locked them (e.g. once routine cards have been submitted).
+ */
+export const saveRoutine = createServerFn({ method: "POST" })
+  .validator(
+    input<{
+      entryId: number
+      key: "routine1" | "routine2"
+      routine: number[]
+    }>()
+  )
+  .handler(async ({ data: d }) => {
+    const user = requireRole("coach")
+    if (!["routine1", "routine2"].includes(d.key))
+      throw new Error("Unknown routine")
+    const row = get<{ routines_locked: number }>(
+      `SELECT c.routines_locked FROM competition_entries e
+       JOIN competitions c ON c.id = e.competition_id WHERE e.id = ?`,
+      d.entryId
+    )
+    if (!row) throw new Error("Entry not found")
+    if (row.routines_locked && !hasRole(user, "admin"))
+      throw new Error(
+        "Routines for this competition are locked. Ask an admin to unlock them."
+      )
+    const routine = d.routine
+      .slice(0, 10)
+      .map((n) => (Number.isInteger(n) && n > 0 ? n : 0))
+    run(
+      `UPDATE competition_entries SET ${d.key} = ? WHERE id = ?`,
+      JSON.stringify(routine),
+      d.entryId
+    )
+  })
+
+export const setRoutinesLocked = createServerFn({ method: "POST" })
+  .validator(input<{ competitionId: number; locked: boolean }>())
+  .handler(async ({ data: d }) => {
+    const user = requireRole("admin")
+    run(
+      `UPDATE competitions SET routines_locked = ?, routines_locked_by = ?, routines_locked_on = ?
+       WHERE id = ?`,
+      d.locked ? 1 : 0,
+      d.locked ? user.name : null,
+      d.locked ? today() : null,
+      d.competitionId
+    )
+  })
+
 export const removeEntry = createServerFn({ method: "POST" })
   .validator(input<number>())
   .handler(async ({ data: id }) => {

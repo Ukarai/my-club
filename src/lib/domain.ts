@@ -114,7 +114,7 @@ export const ROLES = [
   {
     value: "coach",
     label: "Coach",
-    hint: "Record progress, notes and targets, and manage gymnasts and groups. Competitions are view-only",
+    hint: "Record progress, notes and targets, manage gymnasts and groups, and edit competition routines unless locked",
   },
   {
     value: "viewer",
@@ -240,6 +240,10 @@ export type Competition = {
   entry_fee: number | null
   status: CompetitionStatus
   notes: string | null
+  /** 1 when an admin has locked routine cards; coaches can then only view them */
+  routines_locked: number
+  routines_locked_by: string | null
+  routines_locked_on: string | null
 }
 
 export type CompetitionSummary = Competition & {

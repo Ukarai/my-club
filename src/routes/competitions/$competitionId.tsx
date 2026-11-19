@@ -5,7 +5,14 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router"
-import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react"
+import {
+  AlertTriangle,
+  Lock,
+  LockOpen,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react"
 import { cn } from "cn"
 import {
   addEntries,
@@ -13,7 +20,9 @@ import {
   deleteTask,
   getCompetition,
   removeEntry,
+  saveRoutine,
   saveTask,
+  setRoutinesLocked,
   setTaskDone,
   updateEntry,
   type EntryPatch,
@@ -181,7 +190,12 @@ function CompetitionPage() {
       >
         <TabsList className="max-w-full overflow-x-auto overflow-y-hidden">
           <TabsTrigger value="entries">Entries</TabsTrigger>
-          <TabsTrigger value="routines">Routines</TabsTrigger>
+          <TabsTrigger value="routines">
+            Routines
+            {c.routines_locked ? (
+              <Lock className="size-3.5" aria-label="locked" />
+            ) : null}
+          </TabsTrigger>
           <TabsTrigger value="tasks">
             Tasks{openTasks > 0 && ` (${openTasks})`}
           </TabsTrigger>
@@ -436,14 +450,80 @@ function EntriesTab({ data }: { data: Data }) {
 
 const READY = new Set(["independent", "in_routine"])
 
+/** Admins can always edit routines; coaches can until an admin locks them. */
+function useCanEditRoutines(data: Data) {
+  const isAdmin = useCan("admin")
+  const isCoach = useCan("coach")
+  return isAdmin || (isCoach && !data.competition.routines_locked)
+}
+
+function RoutineLock({ data }: { data: Data }) {
+  const router = useRouter()
+  const isAdmin = useCan("admin")
+  const c = data.competition
+  const locked = !!c.routines_locked
+  const toggle = useAction(async () => {
+    await setRoutinesLocked({
+      data: { competitionId: c.id, locked: !locked },
+    })
+    await router.invalidate()
+  })
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 text-sm",
+        locked &&
+          "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40"
+      )}
+    >
+      <div className="flex items-start gap-2">
+        {locked ? (
+          <Lock className="mt-0.5 size-4 shrink-0 text-amber-600" />
+        ) : (
+          <LockOpen className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        )}
+        <div>
+          <p className="font-medium">
+            {locked ? "Routines are locked" : "Routines are open for editing"}
+          </p>
+          <p className="text-muted-foreground">
+            {locked
+              ? `Only admins can change routine cards${c.routines_locked_by ? ` · locked by ${c.routines_locked_by}` : ""}${c.routines_locked_on ? ` on ${formatDate(c.routines_locked_on)}` : ""}.`
+              : "Coaches and admins can change routine cards."}
+          </p>
+        </div>
+      </div>
+      {isAdmin && (
+        <div className="flex flex-col items-end gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={toggle.pending}
+            onClick={() => toggle.run()}
+          >
+            {locked ? <LockOpen /> : <Lock />}
+            {locked ? "Unlock routines" : "Lock routines"}
+          </Button>
+          <FormError error={toggle.error} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RoutinesTab({ data }: { data: Data }) {
   const active = data.entries.filter((e) => e.status !== "withdrawn")
   if (!active.length)
     return (
-      <EmptyState title="Enter gymnasts first to build their routine cards" />
+      <div className="flex flex-col gap-4">
+        <RoutineLock data={data} />
+        <EmptyState title="Enter gymnasts first to build their routine cards" />
+      </div>
     )
   return (
     <div className="flex flex-col gap-4">
+      <RoutineLock data={data} />
       <p className="text-sm text-muted-foreground">
         Up to 10 skills per routine. Skills marked ✓ are ones the gymnast can
         already do independently; repeated skills and skills not yet independent
@@ -457,8 +537,14 @@ function RoutinesTab({ data }: { data: Data }) {
 }
 
 function RoutineCard({ entry, data }: { entry: Entry; data: Data }) {
-  const upd = useEntryUpdate()
-  const canEdit = useCan("admin")
+  const router = useRouter()
+  const canEdit = useCanEditRoutines(data)
+  const upd = useAction(
+    async (key: "routine1" | "routine2", routine: number[]) => {
+      await saveRoutine({ data: { entryId: entry.id, key, routine } })
+      await router.invalidate()
+    }
+  )
   const statusFor = new Map(
     data.readySkills
       .filter((r) => r.gymnast_id === entry.gymnast_id)
@@ -486,7 +572,7 @@ function RoutineCard({ entry, data }: { entry: Entry; data: Data }) {
             skills={data.skills}
             statusFor={statusFor}
             disabled={!canEdit || upd.pending}
-            onChange={(routine) => upd.run({ id: entry.id, [key]: routine })}
+            onChange={(routine) => upd.run(key, routine)}
           />
         ))}
         <FormError error={upd.error} />
