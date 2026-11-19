@@ -34,8 +34,8 @@ Everyone signs in with an email and password. Admins add people on the **Users**
 
 | Role | Can |
 | --- | --- |
-| **Admin** | Everything, including managing users, editing the skill catalogue and deleting gymnasts or competitions |
-| **Coach** | Record skill progress, notes and targets; add and edit gymnasts, groups and competitions; manage entries, routines, tasks and results |
+| **Admin** | Everything, including managing users, editing the skill catalogue, deleting gymnasts, and all competition management: details, entries, fees, routines, tasks and results |
+| **Coach** | Record skill progress, notes and targets; add and edit gymnasts and groups. Competitions are view-only |
 | **Viewer** | Read-only. Guardian contact and medical details are hidden (injury notes are still visible) |
 
 - New users get a temporary password from an admin and can change it under **Your account**. There is no email-based reset: if someone forgets their password, an admin resets it on the Users page.

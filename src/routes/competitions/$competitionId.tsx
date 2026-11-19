@@ -78,8 +78,7 @@ function CompetitionPage() {
   const { tab = "entries" } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const edit = useDialog()
-  const canEdit = useCan("coach")
-  const isAdmin = useCan("admin")
+  const canEdit = useCan("admin")
   const c = data.competition
   const active = data.entries.filter((e) => e.status !== "withdrawn")
   const unpaid = active.filter((e) => !e.fee_paid).length
@@ -126,7 +125,7 @@ function CompetitionPage() {
           <Button variant="outline" onClick={edit.show}>
             <Pencil /> Edit
           </Button>
-          {isAdmin && (
+          {canEdit && (
             <Button
               variant="destructive"
               size="icon"
@@ -244,7 +243,7 @@ function Summary({
 
 function EntriesTab({ data }: { data: Data }) {
   const router = useRouter()
-  const canEdit = useCan("coach")
+  const canEdit = useCan("admin")
   const upd = useEntryUpdate()
   const [selected, setSelected] = React.useState<number[]>([])
   const entered = new Set(data.entries.map((e) => e.gymnast_id))
@@ -459,7 +458,7 @@ function RoutinesTab({ data }: { data: Data }) {
 
 function RoutineCard({ entry, data }: { entry: Entry; data: Data }) {
   const upd = useEntryUpdate()
-  const canEdit = useCan("coach")
+  const canEdit = useCan("admin")
   const statusFor = new Map(
     data.readySkills
       .filter((r) => r.gymnast_id === entry.gymnast_id)
@@ -601,7 +600,7 @@ function RoutineEditor({
 
 function TasksTab({ data }: { data: Data }) {
   const router = useRouter()
-  const canEdit = useCan("coach")
+  const canEdit = useCan("admin")
   const add = useAction(async (form: HTMLFormElement) => {
     const v = formValues(form)
     await saveTask({
@@ -721,7 +720,7 @@ function TasksTab({ data }: { data: Data }) {
 
 function ResultsTab({ data }: { data: Data }) {
   const upd = useEntryUpdate()
-  const canEdit = useCan("coach")
+  const canEdit = useCan("admin")
   const active = data.entries.filter((e) => e.status !== "withdrawn")
   if (!active.length)
     return <EmptyState title="No entries to record results for" />

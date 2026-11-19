@@ -109,12 +109,12 @@ export const ROLES = [
   {
     value: "admin",
     label: "Admin",
-    hint: "Everything, including managing users, the skill catalogue and deleting records",
+    hint: "Everything, including competitions, managing users, the skill catalogue and deleting records",
   },
   {
     value: "coach",
     label: "Coach",
-    hint: "Record progress, notes, targets and manage competition entries",
+    hint: "Record progress, notes and targets, and manage gymnasts and groups. Competitions are view-only",
   },
   {
     value: "viewer",

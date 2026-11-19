@@ -598,7 +598,7 @@ export type CompetitionInput = {
 export const saveCompetition = createServerFn({ method: "POST" })
   .validator(input<CompetitionInput>())
   .handler(async ({ data: d }) => {
-    requireRole("coach")
+    requireRole("admin")
     if (!d.name.trim() || !d.start_date)
       throw new Error("Name and start date are required")
     const vals = [
@@ -645,7 +645,7 @@ export const addEntries = createServerFn({ method: "POST" })
     }>()
   )
   .handler(async ({ data: d }) => {
-    requireRole("coach")
+    requireRole("admin")
     tx(() => {
       for (const gid of d.gymnastIds) {
         run(
@@ -674,7 +674,7 @@ export type EntryPatch = {
 export const updateEntry = createServerFn({ method: "POST" })
   .validator(input<EntryPatch>())
   .handler(async ({ data: d }) => {
-    requireRole("coach")
+    requireRole("admin")
     const sets: string[] = []
     const vals: (string | number | null)[] = []
     const set = (col: string, v: string | number | null) => {
@@ -700,7 +700,7 @@ export const updateEntry = createServerFn({ method: "POST" })
 export const removeEntry = createServerFn({ method: "POST" })
   .validator(input<number>())
   .handler(async ({ data: id }) => {
-    requireRole("coach")
+    requireRole("admin")
     run("DELETE FROM competition_entries WHERE id = ?", id)
   })
 
@@ -714,7 +714,7 @@ export const saveTask = createServerFn({ method: "POST" })
     }>()
   )
   .handler(async ({ data: d }) => {
-    requireRole("coach")
+    requireRole("admin")
     if (!d.title.trim()) throw new Error("Task needs a title")
     return run(
       "INSERT INTO competition_tasks (competition_id, title, due_date, assignee) VALUES (?, ?, ?, ?)",
@@ -728,7 +728,7 @@ export const saveTask = createServerFn({ method: "POST" })
 export const setTaskDone = createServerFn({ method: "POST" })
   .validator(input<{ id: number; done: boolean }>())
   .handler(async ({ data }) => {
-    requireRole("coach")
+    requireRole("admin")
     run(
       "UPDATE competition_tasks SET done = ? WHERE id = ?",
       data.done ? 1 : 0,
@@ -739,7 +739,7 @@ export const setTaskDone = createServerFn({ method: "POST" })
 export const deleteTask = createServerFn({ method: "POST" })
   .validator(input<number>())
   .handler(async ({ data: id }) => {
-    requireRole("coach")
+    requireRole("admin")
     run("DELETE FROM competition_tasks WHERE id = ?", id)
   })
 

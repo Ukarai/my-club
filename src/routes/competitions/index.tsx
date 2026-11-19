@@ -60,7 +60,7 @@ function Competitions() {
   const comps = Route.useLoaderData()
   const navigate = useNavigate()
   const dialog = useDialog()
-  const canEdit = useCan("coach")
+  const canEdit = useCan("admin")
   const t = today()
   const upcoming = comps
     .filter((c) => (c.end_date ?? c.start_date) >= t)
