@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FormError, formValues, useAction } from "@/components/form"
-import { saveGymnast } from "@/server/functions"
+import { saveGymnast } from "@/server/functions/gymnasts"
 import type { Gymnast } from "@/lib/domain"
 
 export function GymnastDialog({

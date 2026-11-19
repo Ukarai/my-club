@@ -1,0 +1,65 @@
+// Dashboard summary: upcoming competitions, open injuries, recent progress.
+import { createServerFn } from "@tanstack/react-start"
+import { requireRole } from "../auth"
+import { all, get } from "../db"
+import { today } from "@/lib/domain"
+import type {
+  CompetitionSummary,
+  Note,
+  SkillHistory,
+  Target,
+} from "@/lib/domain"
+
+export const getDashboard = createServerFn({ method: "GET" }).handler(
+  async () => {
+    requireRole("viewer")
+    const t = today()
+    return {
+      counts: get<{
+        gymnasts: number
+        skills: number
+        targets: number
+        injuries: number
+      }>(
+        `SELECT
+        (SELECT count(*) FROM gymnasts WHERE active = 1) AS gymnasts,
+        (SELECT count(*) FROM skills) AS skills,
+        (SELECT count(*) FROM targets t JOIN gymnasts g ON g.id = t.gymnast_id
+           WHERE t.status = 'active' AND g.active = 1) AS targets,
+        (SELECT count(*) FROM notes n JOIN gymnasts g ON g.id = n.gymnast_id
+           WHERE n.category = 'injury' AND n.resolved = 0 AND g.active = 1) AS injuries`
+      )!,
+      upcoming: all<CompetitionSummary>(
+        `SELECT c.*,
+        (SELECT count(*) FROM competition_entries e WHERE e.competition_id = c.id AND e.status != 'withdrawn') AS entry_count,
+        (SELECT count(*) FROM competition_tasks k WHERE k.competition_id = c.id AND k.done = 0) AS open_tasks
+       FROM competitions c
+       WHERE coalesce(c.end_date, c.start_date) >= ? AND c.status != 'cancelled'
+       ORDER BY c.start_date LIMIT 5`,
+        t
+      ),
+      targetsDue: all<Target & { gymnast_name: string }>(
+        `SELECT t.*, s.name AS skill_name, g.first_name || ' ' || g.last_name AS gymnast_name
+       FROM targets t JOIN gymnasts g ON g.id = t.gymnast_id
+       LEFT JOIN skills s ON s.id = t.skill_id
+       WHERE t.status = 'active' AND g.active = 1
+       ORDER BY t.target_date IS NULL, t.target_date LIMIT 8`
+      ),
+      injuries: all<Note & { gymnast_name: string }>(
+        `SELECT n.*, g.first_name || ' ' || g.last_name AS gymnast_name
+       FROM notes n JOIN gymnasts g ON g.id = n.gymnast_id
+       WHERE n.category = 'injury' AND n.resolved = 0 AND g.active = 1
+       ORDER BY n.noted_on DESC`
+      ),
+      recentProgress: all<
+        SkillHistory & { gymnast_id: number; gymnast_name: string }
+      >(
+        `SELECT h.*, s.name AS skill_name, g.first_name || ' ' || g.last_name AS gymnast_name
+       FROM skill_history h JOIN skills s ON s.id = h.skill_id
+       JOIN gymnasts g ON g.id = h.gymnast_id
+       WHERE h.status != 'cleared'
+       ORDER BY h.recorded_on DESC, h.id DESC LIMIT 10`
+      ),
+    }
+  }
+)

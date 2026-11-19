@@ -22,6 +22,12 @@ export const SKILL_STATUS_STYLES: Record<string, string> = {
 }
 
 export function SkillStatusBadge({ status }: { status: string }) {
+  if (status === "cleared")
+    return (
+      <span className={cn(pill, "border border-dashed text-muted-foreground")}>
+        Cleared
+      </span>
+    )
   return (
     <span className={cn(pill, SKILL_STATUS_STYLES[status])}>
       {labelFor(SKILL_STATUSES, status)}

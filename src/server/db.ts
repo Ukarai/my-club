@@ -37,17 +37,20 @@ CREATE TABLE IF NOT EXISTS gymnast_skills (
   skill_id INTEGER NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
   status TEXT NOT NULL,
   updated_at TEXT NOT NULL,
+  updated_by TEXT,
   note TEXT,
   PRIMARY KEY (gymnast_id, skill_id)
 );
 
--- Every status change, so progress over time can be reviewed
+-- Every status change (including clearing a status, recorded as
+-- 'cleared'), with who made it, so progress can be reviewed and audited
 CREATE TABLE IF NOT EXISTS skill_history (
   id INTEGER PRIMARY KEY,
   gymnast_id INTEGER NOT NULL REFERENCES gymnasts(id) ON DELETE CASCADE,
   skill_id INTEGER NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
   status TEXT NOT NULL,
   recorded_on TEXT NOT NULL,
+  recorded_by TEXT,
   note TEXT
 );
 
@@ -155,6 +158,14 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at TEXT NOT NULL
 );
 
+-- Failed sign-ins per email, for the temporary lockout. Kept in the database
+-- so a restart doesn't reset it. Rows older than the lock window are pruned.
+CREATE TABLE IF NOT EXISTS login_failures (
+  email TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  first_at INTEGER NOT NULL  -- ms since epoch of the first failure in the window
+);
+
 CREATE TABLE IF NOT EXISTS competition_tasks (
   id INTEGER PRIMARY KEY,
   competition_id INTEGER NOT NULL REFERENCES competitions(id) ON DELETE CASCADE,
@@ -189,6 +200,20 @@ function init(conn: DatabaseSync) {
   migrate(conn)
 }
 
+/** ALTER TABLE ADD COLUMN, skipped when a fresh SCHEMA already has it. */
+function addColumn(
+  conn: DatabaseSync,
+  table: string,
+  column: string,
+  type: string
+) {
+  const cols = conn.prepare(`PRAGMA table_info(${table})`).all() as {
+    name: string
+  }[]
+  if (!cols.some((c) => c.name === column))
+    conn.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
+}
+
 // One-off data migrations, tracked with SQLite's user_version so each runs
 // exactly once per database (and never undoes a later edit by the club).
 function migrate(conn: DatabaseSync) {
@@ -206,22 +231,21 @@ function migrate(conn: DatabaseSync) {
   }
   if (version < 2) {
     // Routine locking. Fresh databases already have these from SCHEMA.
-    const cols = new Set(
-      (
-        conn.prepare("PRAGMA table_info(competitions)").all() as {
-          name: string
-        }[]
-      ).map((c) => c.name)
+    addColumn(
+      conn,
+      "competitions",
+      "routines_locked",
+      "INTEGER NOT NULL DEFAULT 0"
     )
-    if (!cols.has("routines_locked"))
-      conn.exec(
-        "ALTER TABLE competitions ADD COLUMN routines_locked INTEGER NOT NULL DEFAULT 0"
-      )
-    if (!cols.has("routines_locked_by"))
-      conn.exec("ALTER TABLE competitions ADD COLUMN routines_locked_by TEXT")
-    if (!cols.has("routines_locked_on"))
-      conn.exec("ALTER TABLE competitions ADD COLUMN routines_locked_on TEXT")
+    addColumn(conn, "competitions", "routines_locked_by", "TEXT")
+    addColumn(conn, "competitions", "routines_locked_on", "TEXT")
     conn.exec("PRAGMA user_version = 2")
+  }
+  if (version < 3) {
+    // Who made each skill status change. Older rows stay NULL (unknown).
+    addColumn(conn, "gymnast_skills", "updated_by", "TEXT")
+    addColumn(conn, "skill_history", "recorded_by", "TEXT")
+    conn.exec("PRAGMA user_version = 3")
   }
 }
 

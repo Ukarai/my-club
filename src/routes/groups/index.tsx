@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
-import { listGroups } from "@/server/functions"
+import { listGroups } from "@/server/functions/groups"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/form"
 import { GroupDot } from "@/components/badges"

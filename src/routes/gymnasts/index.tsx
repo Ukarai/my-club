@@ -1,7 +1,8 @@
 import * as React from "react"
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
-import { listGroups, listGymnasts } from "@/server/functions"
+import { listGroups } from "@/server/functions/groups"
+import { listGymnasts } from "@/server/functions/gymnasts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {

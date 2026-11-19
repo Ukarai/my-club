@@ -1,0 +1,12 @@
+.git
+node_modules
+dist
+data
+.tanstack
+.nitro
+.output
+.vinxi
+.env*
+*.local
+*.log
+.DS_Store

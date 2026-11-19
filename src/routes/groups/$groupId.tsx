@@ -12,7 +12,7 @@ import {
   deleteGroup,
   getGroup,
   removeGroupMember,
-} from "@/server/functions"
+} from "@/server/functions/groups"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

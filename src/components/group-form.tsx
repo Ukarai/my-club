@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FormError, formValues, useAction } from "@/components/form"
 import { GROUP_COLOR_STYLES } from "@/components/badges"
-import { saveGroup } from "@/server/functions"
+import { saveGroup } from "@/server/functions/groups"
 import { GROUP_COLORS, type Group } from "@/lib/domain"
 
 export function GroupDialog({

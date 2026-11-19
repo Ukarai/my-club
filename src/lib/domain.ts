@@ -181,6 +181,8 @@ export type GymnastSkill = {
   skill_id: number
   status: SkillStatus
   updated_at: string
+  /** Name of the user who last changed it (null for older records) */
+  updated_by: string | null
   note: string | null
 }
 
@@ -188,8 +190,11 @@ export type SkillHistory = {
   id: number
   skill_id: number
   skill_name: string
-  status: SkillStatus
+  /** "cleared" when a coach removed the skill's status */
+  status: SkillStatus | "cleared"
   recorded_on: string
+  /** Name of the user who made the change (null for older records) */
+  recorded_by: string | null
   note: string | null
 }
 

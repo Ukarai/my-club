@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, FormError, NativeSelect, formValues, useAction } from "@/components/form"
-import { saveCompetition } from "@/server/functions"
+import { saveCompetition } from "@/server/functions/competitions"
 import { COMPETITION_STATUSES, type Competition } from "@/lib/domain"
 
 export function CompetitionDialog({

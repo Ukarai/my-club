@@ -1,6 +1,7 @@
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { AlertTriangle, CalendarDays, Target, Users } from "lucide-react"
-import { getDashboard, loadDemoData } from "@/server/functions"
+import { getDashboard } from "@/server/functions/dashboard"
+import { loadDemoData } from "@/server/functions/demo"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CompetitionStatusBadge, SkillStatusBadge } from "@/components/badges"
@@ -254,6 +255,9 @@ function Dashboard() {
                   <SkillStatusBadge status={h.status} />
                   <span className="text-xs text-muted-foreground">
                     {formatDate(h.recorded_on)}
+                    {h.recorded_by && (
+                      <span className="max-sm:hidden"> · {h.recorded_by}</span>
+                    )}
                   </span>
                 </span>
               </Link>

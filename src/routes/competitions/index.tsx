@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
-import { listCompetitions } from "@/server/functions"
+import { listCompetitions } from "@/server/functions/competitions"
 import { Button } from "@/components/ui/button"
 import { CompetitionStatusBadge } from "@/components/badges"
 import { EmptyState } from "@/components/form"

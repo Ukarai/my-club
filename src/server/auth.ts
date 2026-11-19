@@ -110,27 +110,33 @@ export function requireRole(min: Role = "viewer"): SessionUser {
   return user
 }
 
-// ── Basic brute-force protection (per email, in memory) ──
+// ── Brute-force protection: per email, stored in the database so it
+//    survives restarts and redeploys ──
 
 const MAX_FAILURES = 10
 const LOCK_MS = 15 * 60_000
-const failures = new Map<string, { count: number; first: number }>()
 
 export function checkLockout(email: string) {
-  const f = failures.get(email.toLowerCase())
-  if (f && f.count >= MAX_FAILURES && Date.now() - f.first < LOCK_MS) {
+  const f = get<{ count: number; first_at: number }>(
+    "SELECT count, first_at FROM login_failures WHERE email = ?",
+    email.toLowerCase()
+  )
+  if (f && f.count >= MAX_FAILURES && Date.now() - f.first_at < LOCK_MS) {
     throw new AuthError("Too many failed attempts. Try again in 15 minutes.")
   }
 }
 
 export function recordFailure(email: string) {
-  const key = email.toLowerCase()
-  const f = failures.get(key)
-  if (!f || Date.now() - f.first > LOCK_MS)
-    failures.set(key, { count: 1, first: Date.now() })
-  else f.count++
+  const now = Date.now()
+  run("DELETE FROM login_failures WHERE first_at < ?", now - LOCK_MS)
+  run(
+    `INSERT INTO login_failures (email, count, first_at) VALUES (?, 1, ?)
+     ON CONFLICT (email) DO UPDATE SET count = count + 1`,
+    email.toLowerCase(),
+    now
+  )
 }
 
 export function clearFailures(email: string) {
-  failures.delete(email.toLowerCase())
+  run("DELETE FROM login_failures WHERE email = ?", email.toLowerCase())
 }

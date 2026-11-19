@@ -1,7 +1,7 @@
 import * as React from "react"
 import { createFileRoute, useRouter } from "@tanstack/react-router"
 import { Pencil, Plus, Trash2 } from "lucide-react"
-import { deleteSkill, listSkills, saveSkill } from "@/server/functions"
+import { deleteSkill, listSkills, saveSkill } from "@/server/functions/skills"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"

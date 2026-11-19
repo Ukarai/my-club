@@ -1,0 +1,13 @@
+# docker compose up -d --build
+# Then put it behind HTTPS (see "Deploying" in the README).
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000" # only reachable via the reverse proxy on this host
+    volumes:
+      - club-data:/app/data
+
+volumes:
+  club-data:

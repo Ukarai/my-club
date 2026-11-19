@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SkillsRouteImport } from './routes/skills'
 import { Route as UsersRouteImport } from './routes/users'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as CompetitionsIndexRouteImport } from './routes/competitions/index'
 import { Route as CompetitionsCompetitionIdRouteImport } from './routes/competitions/$competitionId'
 import { Route as GroupsIndexRouteImport } from './routes/groups/index'
@@ -50,6 +51,11 @@ const SkillsRoute = SkillsRouteImport.update({
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompetitionsIndexRoute = CompetitionsIndexRouteImport.update({
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/setup': typeof SetupRoute
   '/skills': typeof SkillsRoute
   '/users': typeof UsersRoute
+  '/api/health': typeof ApiHealthRoute
   '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/setup': typeof SetupRoute
   '/skills': typeof SkillsRoute
   '/users': typeof UsersRoute
+  '/api/health': typeof ApiHealthRoute
   '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/setup': typeof SetupRoute
   '/skills': typeof SkillsRoute
   '/users': typeof UsersRoute
+  '/api/health': typeof ApiHealthRoute
   '/competitions/$competitionId': typeof CompetitionsCompetitionIdRoute
   '/groups/$groupId': typeof GroupsGroupIdRoute
   '/gymnasts/$gymnastId': typeof GymnastsGymnastIdRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/skills'
     | '/users'
+    | '/api/health'
     | '/competitions/$competitionId'
     | '/groups/$groupId'
     | '/gymnasts/$gymnastId'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/skills'
     | '/users'
+    | '/api/health'
     | '/competitions/$competitionId'
     | '/groups/$groupId'
     | '/gymnasts/$gymnastId'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/setup'
     | '/skills'
     | '/users'
+    | '/api/health'
     | '/competitions/$competitionId'
     | '/groups/$groupId'
     | '/gymnasts/$gymnastId'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   SetupRoute: typeof SetupRoute
   SkillsRoute: typeof SkillsRoute
   UsersRoute: typeof UsersRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   CompetitionsCompetitionIdRoute: typeof CompetitionsCompetitionIdRoute
   GroupsGroupIdRoute: typeof GroupsGroupIdRoute
   GymnastsGymnastIdRoute: typeof GymnastsGymnastIdRoute
@@ -229,6 +242,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/competitions/': {
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetupRoute: SetupRoute,
   SkillsRoute: SkillsRoute,
   UsersRoute: UsersRoute,
+  ApiHealthRoute: ApiHealthRoute,
   CompetitionsCompetitionIdRoute: CompetitionsCompetitionIdRoute,
   GroupsGroupIdRoute: GroupsGroupIdRoute,
   GymnastsGymnastIdRoute: GymnastsGymnastIdRoute,
