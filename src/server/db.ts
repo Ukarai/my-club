@@ -1,7 +1,7 @@
 import { DatabaseSync, type SQLInputValue } from "node:sqlite"
 import { mkdirSync } from "node:fs"
 import { dirname, resolve } from "node:path"
-import { SKILL_SEED } from "./seed"
+import { SKILL_SEED, TARIFF_UPDATES_2025 } from "./seed"
 
 const DB_PATH = resolve(process.env.CLUB_DB_PATH ?? "data/club.db")
 
@@ -150,6 +150,24 @@ function init(conn: DatabaseSync) {
     SKILL_SEED.forEach((s, i) =>
       insert.run(s.name, s.category, s.tariff, s.description ?? null, i)
     )
+  }
+  migrate(conn)
+}
+
+// One-off data migrations, tracked with SQLite's user_version so each runs
+// exactly once per database (and never undoes a later edit by the club).
+function migrate(conn: DatabaseSync) {
+  const { user_version: version } = conn
+    .prepare("PRAGMA user_version")
+    .get() as { user_version: number }
+  if (version < 1) {
+    // 2025-2028 Code of Points tariffs; only rows on the old default change.
+    const update = conn.prepare(
+      "UPDATE skills SET tariff = ? WHERE name = ? AND abs(tariff - ?) < 0.001"
+    )
+    for (const [name, from, to] of TARIFF_UPDATES_2025)
+      update.run(to, name, from)
+    conn.exec("PRAGMA user_version = 1")
   }
 }
 
