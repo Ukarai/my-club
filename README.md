@@ -26,6 +26,8 @@ Open http://localhost:3000. On first run you'll be asked to create the club's fi
 
 ## Accounts and roles
 
+> **Test accounts (development only):** `pnpm dev` creates five test accounts: Alex Admin, Casey Head Coach, Jordan Coach, Sam Parent (viewer) and Riley Volunteer (viewer). Pick one from the dropdown on the sign-in page to log in without a password. This is turned off in production builds (`import.meta.env.DEV`), so none of it reaches a deployed site. Their emails end in `@example.test`, and they show on the Users page like any other account.
+
 Everyone signs in with an email and password. Admins add people on the **Users** page and give each one a role:
 
 | Role | Can |

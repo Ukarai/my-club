@@ -1,24 +1,40 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { login } from "@/server/auth-functions"
+import { listTestAccounts, login, testLogin } from "@/server/auth-functions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FormError, formValues, useAction } from "@/components/form"
+import {
+  Field,
+  FormError,
+  NativeSelect,
+  formValues,
+  useAction,
+} from "@/components/form"
+import { ROLES, labelFor } from "@/lib/domain"
 import { AuthCard, safeRedirect } from "@/components/auth-card"
 
 export const Route = createFileRoute("/login")({
   validateSearch: (s: Record<string, unknown>): { redirect?: string } =>
     typeof s.redirect === "string" ? { redirect: s.redirect } : {},
+  loader: () => listTestAccounts(),
   component: LoginPage,
 })
 
 function LoginPage() {
   const { redirect } = Route.useSearch()
   const router = useRouter()
+  const testAccounts = Route.useLoaderData()
+  const done = async () => {
+    await router.invalidate()
+    await router.history.push(safeRedirect(redirect))
+  }
   const submit = useAction(async (form: HTMLFormElement) => {
     const v = formValues(form)
     await login({ data: { email: v.email, password: v.password } })
-    await router.invalidate()
-    await router.history.push(safeRedirect(redirect))
+    await done()
+  })
+  const quick = useAction(async (form: HTMLFormElement) => {
+    await testLogin({ data: formValues(form).account })
+    await done()
   })
 
   return (
@@ -26,6 +42,29 @@ function LoginPage() {
       title="Sign in"
       description="Use the account your club admin set up for you."
     >
+      {testAccounts.length > 0 && (
+        <form
+          className="mb-6 flex flex-col gap-3 rounded-2xl border border-dashed border-amber-500/50 bg-amber-500/5 p-3"
+          onSubmit={(e) => {
+            e.preventDefault()
+            quick.run(e.currentTarget)
+          }}
+        >
+          <Field label="Test account (development only)" htmlFor="account">
+            <NativeSelect id="account" name="account">
+              {testAccounts.map((a) => (
+                <option key={a.email} value={a.email}>
+                  {a.name} · {labelFor(ROLES, a.role)}
+                </option>
+              ))}
+            </NativeSelect>
+          </Field>
+          <FormError error={quick.error} />
+          <Button type="submit" variant="outline" disabled={quick.pending}>
+            {quick.pending ? "Signing in…" : "Sign in as test account"}
+          </Button>
+        </form>
+      )}
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {

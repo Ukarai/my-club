@@ -15,6 +15,11 @@ import {
   verifyPassword,
 } from "./auth"
 import {
+  TEST_ACCOUNTS,
+  TEST_LOGIN_ENABLED,
+  ensureTestAccounts,
+} from "./test-accounts"
+import {
   MIN_PASSWORD_LENGTH,
   ROLES,
   type Role,
@@ -50,11 +55,47 @@ const adminCount = () =>
 
 /** Who is signed in, and whether the club still needs its first admin. */
 export const getSession = createServerFn({ method: "GET" }).handler(
-  async () => ({
-    user: currentUser(),
-    needsSetup: userCount() === 0,
-  })
+  async () => {
+    ensureTestAccounts()
+    return { user: currentUser(), needsSetup: userCount() === 0 }
+  }
 )
+
+// ── Development-only test account picker ──
+
+export const listTestAccounts = createServerFn({ method: "GET" }).handler(
+  async () => {
+    if (!TEST_LOGIN_ENABLED) return []
+    ensureTestAccounts()
+    const emails = TEST_ACCOUNTS.map((a) => a.email)
+    return all<{ email: string; name: string; role: Role }>(
+      `SELECT email, name, role FROM users
+       WHERE active = 1 AND email IN (${emails.map(() => "?").join(",")})`,
+      ...emails
+    ).sort(
+      (a, b) =>
+        emails.indexOf(a.email.toLowerCase()) -
+        emails.indexOf(b.email.toLowerCase())
+    )
+  }
+)
+
+export const testLogin = createServerFn({ method: "POST" })
+  .validator(input<string>())
+  .handler(async ({ data }) => {
+    if (!TEST_LOGIN_ENABLED)
+      throw new AuthError("Test accounts are only available in development")
+    const email = data.trim().toLowerCase()
+    if (!TEST_ACCOUNTS.some((a) => a.email === email))
+      throw new AuthError("Not a test account")
+    const user = get<{ id: number }>(
+      "SELECT id FROM users WHERE email = ? AND active = 1",
+      email
+    )
+    if (!user) throw new AuthError("That test account is deactivated")
+    endSession()
+    startSession(user.id)
+  })
 
 export const createFirstAdmin = createServerFn({ method: "POST" })
   .validator(input<{ name: string; email: string; password: string }>())
