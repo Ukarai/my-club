@@ -37,6 +37,20 @@ export const NOTE_CATEGORIES = [
 ] as const
 export type NoteCategory = (typeof NOTE_CATEGORIES)[number]["value"]
 
+export const SKILL_NOTE_KINDS = [
+  {
+    value: "focus",
+    label: "Current focus",
+    hint: "What we're working on with this skill right now",
+  },
+  {
+    value: "coaching_point",
+    label: "Coaching point",
+    hint: "Something to keep in mind whenever coaching this skill",
+  },
+] as const
+export type SkillNoteKind = (typeof SKILL_NOTE_KINDS)[number]["value"]
+
 export const TARGET_STATUSES = [
   { value: "active", label: "Active" },
   { value: "achieved", label: "Achieved" },
@@ -154,6 +168,18 @@ export type SkillHistory = {
   status: SkillStatus
   recorded_on: string
   note: string | null
+}
+
+export type SkillNote = {
+  id: number
+  gymnast_id: number
+  skill_id: number
+  kind: SkillNoteKind
+  body: string
+  author: string | null
+  noted_on: string
+  /** 1 once a focus is done or a point no longer applies; kept as history */
+  archived: number
 }
 
 export type Note = {

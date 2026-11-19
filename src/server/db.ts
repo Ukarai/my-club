@@ -51,6 +51,19 @@ CREATE TABLE IF NOT EXISTS skill_history (
   note TEXT
 );
 
+-- Coaching notes about one skill for one gymnast (focus points, cues)
+CREATE TABLE IF NOT EXISTS skill_notes (
+  id INTEGER PRIMARY KEY,
+  gymnast_id INTEGER NOT NULL REFERENCES gymnasts(id) ON DELETE CASCADE,
+  skill_id INTEGER NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL DEFAULT 'focus',
+  body TEXT NOT NULL,
+  author TEXT,
+  noted_on TEXT NOT NULL,
+  archived INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS skill_notes_gymnast ON skill_notes (gymnast_id, skill_id);
+
 CREATE TABLE IF NOT EXISTS notes (
   id INTEGER PRIMARY KEY,
   gymnast_id INTEGER NOT NULL REFERENCES gymnasts(id) ON DELETE CASCADE,

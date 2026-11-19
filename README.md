@@ -6,6 +6,7 @@ A web app for trampoline clubs to track their gymnasts' progress and manage comp
 
 - **Gymnasts**: profiles with squad, level, guardian contact and medical info. Gymnasts can be archived to keep their history.
 - **Skills**: each gymnast's status on every skill in the club catalogue: *Learning → With support → Without support → Independent → In routine*. Every change is logged in the gymnast's History tab.
+- **Skill notes**: per-gymnast notes on any skill, either a *current focus* (e.g. "keep head up for longer on take-off") or a *coaching point* to remember. Current focuses show under the skill name and in a summary at the top of the Skills tab. Marking a note done keeps it as history.
 - **Training notes**: dated notes by type (general, injury, coaching, achievement). Injury notes stay open until marked resolved, and open injuries are flagged on the dashboard.
 - **Targets**: free-text or skill-linked targets with due dates. A skill-linked target is marked achieved automatically when the skill reaches the goal status.
 - **Competitions**: upcoming and past events, each with its own management page:

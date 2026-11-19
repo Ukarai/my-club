@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start"
 import { requireRole } from "./auth"
 import { all, get, run, tx } from "./db"
-import { SKILL_STATUSES, hasRole, today } from "@/lib/domain"
+import { SKILL_NOTE_KINDS, SKILL_STATUSES, hasRole, today } from "@/lib/domain"
 import type {
   CompTask,
   Competition,
@@ -12,6 +12,7 @@ import type {
   GymnastSkill,
   GymnastSummary,
   Note,
+  SkillNote,
   Skill,
   SkillHistory,
   SkillStatus,
@@ -125,6 +126,11 @@ export const getGymnast = createServerFn({ method: "GET" })
       ),
       notes: all<Note>(
         "SELECT * FROM notes WHERE gymnast_id = ? ORDER BY noted_on DESC, id DESC",
+        id
+      ),
+      skillNotes: all<SkillNote>(
+        `SELECT * FROM skill_notes WHERE gymnast_id = ?
+         ORDER BY archived, CASE kind WHEN 'focus' THEN 0 ELSE 1 END, noted_on DESC, id DESC`,
         id
       ),
       targets: all<Target>(
@@ -317,6 +323,63 @@ export const deleteNote = createServerFn({ method: "POST" })
   .handler(async ({ data: id }) => {
     requireRole("coach")
     run("DELETE FROM notes WHERE id = ?", id)
+  })
+
+// ───────────────────────────── Skill notes ─────────────────────────────
+
+export const saveSkillNote = createServerFn({ method: "POST" })
+  .validator(
+    input<{
+      id?: number
+      gymnastId: number
+      skillId: number
+      kind: string
+      body: string
+    }>()
+  )
+  .handler(async ({ data: d }) => {
+    const user = requireRole("coach")
+    if (!SKILL_NOTE_KINDS.some((k) => k.value === d.kind))
+      throw new Error("Unknown note type")
+    const body = d.body.trim()
+    if (!body) throw new Error("Note can't be empty")
+    if (d.id) {
+      run(
+        "UPDATE skill_notes SET kind = ?, body = ? WHERE id = ? AND gymnast_id = ?",
+        d.kind,
+        body,
+        d.id,
+        d.gymnastId
+      )
+      return d.id
+    }
+    return run(
+      "INSERT INTO skill_notes (gymnast_id, skill_id, kind, body, author, noted_on) VALUES (?, ?, ?, ?, ?, ?)",
+      d.gymnastId,
+      d.skillId,
+      d.kind,
+      body,
+      user.name,
+      today()
+    )
+  })
+
+export const setSkillNoteArchived = createServerFn({ method: "POST" })
+  .validator(input<{ id: number; archived: boolean }>())
+  .handler(async ({ data }) => {
+    requireRole("coach")
+    run(
+      "UPDATE skill_notes SET archived = ? WHERE id = ?",
+      data.archived ? 1 : 0,
+      data.id
+    )
+  })
+
+export const deleteSkillNote = createServerFn({ method: "POST" })
+  .validator(input<number>())
+  .handler(async ({ data: id }) => {
+    requireRole("coach")
+    run("DELETE FROM skill_notes WHERE id = ?", id)
   })
 
 // ───────────────────────────── Targets ─────────────────────────────
@@ -757,6 +820,68 @@ export const loadDemoData = createServerFn({ method: "POST" }).handler(
         addDays(-20),
         "Passed Proficiency 6."
       )
+
+      const skillNotes: [number, string, string, string, string, number][] = [
+        [
+          1,
+          "Front somersault tuck",
+          "focus",
+          "Keep head up for longer on take-off to improve direction — finishing too far forward.",
+          "Coach Jo",
+          -7,
+        ],
+        [
+          1,
+          "Front somersault tuck",
+          "coaching_point",
+          'Tends to throw arms early; cue "arms up, then tuck".',
+          "Coach Jo",
+          -14,
+        ],
+        [
+          0,
+          "Back full twist (Full)",
+          "focus",
+          "Finish the somersault before twisting — twist is starting too early off the bed.",
+          "Coach Sam",
+          -5,
+        ],
+        [
+          0,
+          "Back full twist (Full)",
+          "coaching_point",
+          "Responds best to the belt on the first two attempts each session.",
+          "Coach Sam",
+          -12,
+        ],
+        [
+          0,
+          "Barani straight",
+          "focus",
+          "Keep arms in tight on take-off.",
+          "Coach Sam",
+          -3,
+        ],
+        [
+          2,
+          "Double back tuck",
+          "coaching_point",
+          "No multiple somersaults until physio clears the ankle.",
+          "Coach Sam",
+          -8,
+        ],
+      ]
+      for (const [i, skill, kind, body, author, days] of skillNotes) {
+        run(
+          "INSERT INTO skill_notes (gymnast_id, skill_id, kind, body, author, noted_on) VALUES (?, ?, ?, ?, ?, ?)",
+          ids[i],
+          skillId(skill),
+          kind,
+          body,
+          author,
+          addDays(days)
+        )
+      }
 
       run(
         "INSERT INTO targets (gymnast_id, title, skill_id, goal_status, target_date) VALUES (?, ?, ?, 'independent', ?)",
