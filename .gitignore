@@ -17,3 +17,6 @@ todos.json
 
 # local database
 data/
+
+# Claude Code
+.claude/
