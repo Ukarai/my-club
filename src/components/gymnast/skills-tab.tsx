@@ -39,12 +39,52 @@ import {
 import { useCan } from "@/lib/use-user"
 import type { GymnastData } from "./data"
 
-type SkillFilter = "all" | "tracked" | "untracked" | "notes"
+/** What the skills list shows: a broad filter, or one stage. */
+export type SkillFilter =
+  "all" | "tracked" | "untracked" | "notes" | SkillStatus
 
-export function SkillsTab({ data }: { data: GymnastData }) {
+export function isSkillFilter(v: unknown): v is SkillFilter {
+  return (
+    FILTERS.some((f) => f.value === v) ||
+    SKILL_STATUSES.some((st) => st.value === v)
+  )
+}
+
+const FILTERS: { value: SkillFilter; label: string; empty: string }[] = [
+  {
+    value: "all",
+    label: "All skills",
+    empty: "No skills in the catalogue yet.",
+  },
+  { value: "tracked", label: "Started", empty: "No skills started yet." },
+  {
+    value: "untracked",
+    label: "Not started",
+    empty: "Every skill has been started.",
+  },
+  { value: "notes", label: "With notes", empty: "No skills with notes yet." },
+]
+
+export function SkillsTab({
+  data,
+  filter,
+  onFilterChange: setFilter,
+}: {
+  data: GymnastData
+  /** Kept in the page URL so the header's stage key can set it too. */
+  filter: SkillFilter
+  onFilterChange: (filter: SkillFilter) => Promise<void>
+}) {
   const router = useRouter()
   const canEdit = useCan("coach")
-  const [filter, setFilter] = React.useState<SkillFilter>("all")
+  // Skills changed since the filter was picked stay in view, so a skill
+  // doesn't vanish the moment its status moves it out of the filter.
+  const [kept, setKept] = React.useState<ReadonlySet<number>>(new Set())
+  const [keptFor, setKeptFor] = React.useState(filter)
+  if (keptFor !== filter) {
+    setKeptFor(filter)
+    setKept(new Set())
+  }
   const [open, setOpen] = React.useState<ReadonlySet<number>>(new Set())
   const [pendingSkill, setPendingSkill] = React.useState<number | null>(null)
   const [error, setError] = React.useState<string | null>(null)
@@ -61,6 +101,7 @@ export function SkillsTab({ data }: { data: GymnastData }) {
   )
 
   async function update(skillId: number, status: SkillStatus | null) {
+    setKept((prev) => new Set(prev).add(skillId))
     setPendingSkill(skillId)
     setError(null)
     try {
@@ -84,8 +125,8 @@ export function SkillsTab({ data }: { data: GymnastData }) {
     })
   }
 
-  function jumpTo(skillId: number) {
-    setFilter("all")
+  async function jumpTo(skillId: number) {
+    await setFilter("all")
     toggle(skillId, true)
     requestAnimationFrame(() =>
       document
@@ -95,11 +136,26 @@ export function SkillsTab({ data }: { data: GymnastData }) {
   }
 
   const categories = [...new Set(data.skills.map((s) => s.category))]
+  const fits = (f: SkillFilter, skillId: number) => {
+    switch (f) {
+      case "all":
+        return true
+      case "notes":
+        return (notesBySkill.get(skillId) ?? []).some((n) => !n.archived)
+      case "tracked":
+        return statusBySkill.has(skillId)
+      case "untracked":
+        return !statusBySkill.has(skillId)
+      default:
+        return statusBySkill.get(skillId)?.status === f
+    }
+  }
+  const countFor = (f: SkillFilter) =>
+    data.skills.filter((s) => fits(f, s.id)).length
   const matches = (skillId: number) =>
-    filter === "all" ||
-    (filter === "notes"
-      ? (notesBySkill.get(skillId) ?? []).some((n) => !n.archived)
-      : (filter === "tracked") === statusBySkill.has(skillId))
+    kept.has(skillId) || fits(filter, skillId)
+  const stage = SKILL_STATUSES.find((st) => st.value === filter)
+  const nothingShown = !data.skills.some((s) => matches(s.id))
 
   return (
     <div className="flex flex-col gap-4">
@@ -135,14 +191,39 @@ export function SkillsTab({ data }: { data: GymnastData }) {
             value={filter}
             onChange={(e) => setFilter(e.target.value as SkillFilter)}
           >
-            <option value="all">All skills</option>
-            <option value="tracked">Started</option>
-            <option value="untracked">Not started</option>
-            <option value="notes">With notes</option>
+            {FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label} ({countFor(f.value)})
+              </option>
+            ))}
+            <optgroup label="Stage">
+              {SKILL_STATUSES.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label} ({countFor(st.value)})
+                </option>
+              ))}
+            </optgroup>
           </NativeSelect>
         </label>
       </div>
       <FormError error={error} />
+
+      {nothingShown && (
+        <div className="surface flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3.5 text-sm text-muted-foreground md:px-5">
+          {stage
+            ? `No skills at ${stage.label} yet.`
+            : FILTERS.find((f) => f.value === filter)?.empty}
+          {filter !== "all" && (
+            <button
+              type="button"
+              className="font-semibold text-primary hover:text-primary-dark"
+              onClick={() => setFilter("all")}
+            >
+              Show all skills
+            </button>
+          )}
+        </div>
+      )}
 
       {categories.map((cat) => {
         const inCategory = data.skills.filter((s) => s.category === cat)

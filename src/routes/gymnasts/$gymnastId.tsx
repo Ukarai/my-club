@@ -33,7 +33,11 @@ import { GymnastDialog, useDialog } from "@/components/gymnast-form"
 import { SKILL_STATUSES, ageFrom } from "@/lib/domain"
 import { useCan } from "@/lib/use-user"
 import { GymnastGroups } from "@/components/gymnast/groups"
-import { SkillsTab } from "@/components/gymnast/skills-tab"
+import {
+  SkillsTab,
+  isSkillFilter,
+  type SkillFilter,
+} from "@/components/gymnast/skills-tab"
 import { NotesTab } from "@/components/gymnast/notes-tab"
 import { TargetsTab } from "@/components/gymnast/targets-tab"
 import { CompetitionsTab } from "@/components/gymnast/competitions-tab"
@@ -44,16 +48,32 @@ const TABS = ["skills", "notes", "targets", "competitions", "history"] as const
 type Tab = (typeof TABS)[number]
 
 export const Route = createFileRoute("/gymnasts/$gymnastId")({
-  validateSearch: (s: Record<string, unknown>): { tab?: Tab } =>
-    TABS.includes(s.tab as Tab) ? { tab: s.tab as Tab } : {},
+  validateSearch: (
+    s: Record<string, unknown>
+  ): { tab?: Tab; show?: SkillFilter } => ({
+    ...(TABS.includes(s.tab as Tab) && { tab: s.tab as Tab }),
+    ...(isSkillFilter(s.show) && s.show !== "all" && { show: s.show }),
+  }),
   loader: ({ params }) => getGymnast({ data: Number(params.gymnastId) }),
   component: GymnastPage,
 })
 
 function GymnastPage() {
   const data = Route.useLoaderData()
-  const { tab = "skills" } = Route.useSearch()
+  const { tab = "skills", show = "all" } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
+  // Opens the Skills tab with the list filtered; from the tab's own
+  // dropdown and from the stage key in the header.
+  const showSkills = (filter: SkillFilter) =>
+    navigate({
+      search: (s) => ({
+        ...s,
+        tab: undefined,
+        show: filter === "all" ? undefined : filter,
+      }),
+      replace: true,
+      resetScroll: false,
+    })
   const router = useRouter()
   const edit = useDialog()
   const canEdit = useCan("coach")
@@ -175,14 +195,22 @@ function GymnastPage() {
               </p>
             </div>
           )}
-          <SkillsProgress data={data} />
+          <SkillsProgress
+            data={data}
+            filter={tab === "skills" ? show : null}
+            onPick={showSkills}
+          />
         </div>
       </section>
 
       <Tabs
         value={tab}
         onValueChange={(v) =>
-          navigate({ search: { tab: v as Tab }, replace: true })
+          navigate({
+            search: (s) => ({ ...s, tab: v as Tab }),
+            replace: true,
+            resetScroll: false,
+          })
         }
       >
         <TabsList aria-label="Gymnast sections">
@@ -197,7 +225,7 @@ function GymnastPage() {
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         <TabsContent value="skills" className="pt-4">
-          <SkillsTab data={data} />
+          <SkillsTab data={data} filter={show} onFilterChange={showSkills} />
         </TabsContent>
         <TabsContent value="notes" className="pt-4">
           <NotesTab data={data} />
@@ -226,8 +254,20 @@ function GymnastPage() {
 const stripLabel =
   "text-[11px] font-bold tracking-[0.07em] text-muted-foreground uppercase"
 
-/** Stacked bar of how many catalogue skills are at each status. */
-function SkillsProgress({ data }: { data: GymnastData }) {
+/**
+ * Stacked bar of how many catalogue skills are at each status. The key
+ * below it filters the Skills tab to a stage; tap again to show all.
+ */
+function SkillsProgress({
+  data,
+  filter,
+  onPick,
+}: {
+  data: GymnastData
+  /** The Skills tab's filter, or null when another tab is open. */
+  filter: SkillFilter | null
+  onPick: (filter: SkillFilter) => void
+}) {
   const total = data.skills.length
   // Most advanced first, so the bar fills from the left with the best work.
   const counts = [...SKILL_STATUSES].reverse().map((st) => ({
@@ -266,23 +306,37 @@ function SkillsProgress({ data }: { data: GymnastData }) {
               )
           )}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-[#364660]">
-        {counts.map((c) => (
-          <span
-            key={c.value}
-            className="inline-flex items-center gap-1.5"
-            title={c.hint}
-          >
-            <span
-              aria-hidden
+      <div
+        role="group"
+        aria-label="Show skills at a stage"
+        className="-mx-2 flex flex-wrap gap-x-1 gap-y-0.5 text-xs text-[#364660]"
+      >
+        {counts.map((c) => {
+          const active = filter === c.value
+          return (
+            <button
+              key={c.value}
+              type="button"
+              title={c.hint}
+              aria-pressed={active}
+              onClick={() => onPick(active ? "all" : c.value)}
               className={cn(
-                "size-2 rounded-[2px]",
-                SKILL_STATUS_STYLES[c.value].dot
+                "inline-flex items-center gap-1.5 rounded-full px-2 py-1 transition-colors hover:bg-white hover:text-foreground",
+                active &&
+                  "bg-white text-foreground shadow-[0_1px_2px_rgb(11_31_61/0.08)] ring-1 ring-[#d6dfeb]"
               )}
-            />
-            {c.label} <strong className="text-foreground">{c.n}</strong>
-          </span>
-        ))}
+            >
+              <span
+                aria-hidden
+                className={cn(
+                  "size-2 rounded-[2px]",
+                  SKILL_STATUS_STYLES[c.value].dot
+                )}
+              />
+              {c.label} <strong className="text-foreground">{c.n}</strong>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
