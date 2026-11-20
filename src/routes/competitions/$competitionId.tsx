@@ -6,7 +6,6 @@ import {
   getCompetition,
 } from "@/server/functions/competitions"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import {
   TabCount,
   Tabs,
@@ -15,15 +14,17 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { CompetitionStatusBadge } from "@/components/badges"
-import { FormError, useAction } from "@/components/form"
+import { FormError } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { CompetitionDialog } from "@/components/competition-form"
 import { useDialog } from "@/components/gymnast-form"
-import { daysUntil, formatDate } from "@/lib/domain"
+import { daysUntil, formatDate } from "@/lib/dates"
 import { useCan } from "@/lib/use-user"
 import { EntriesTab } from "@/components/competition/entries-tab"
 import { RoutinesTab } from "@/components/competition/routines-tab"
 import { TasksTab } from "@/components/competition/tasks-tab"
 import { ResultsTab } from "@/components/competition/results-tab"
+import { Summary } from "@/components/competition/summary"
 
 const TABS = ["entries", "routines", "tasks", "results"] as const
 type Tab = (typeof TABS)[number]
@@ -177,34 +178,3 @@ function CompetitionPage() {
     </div>
   )
 }
-
-function Summary({
-  label,
-  value,
-  sub,
-  warn,
-}: {
-  label: string
-  value: string
-  sub?: string
-  warn?: boolean
-}) {
-  return (
-    <Card size="sm">
-      <CardContent>
-        <div className="text-xs text-muted-foreground">{label}</div>
-        <div
-          className={cn(
-            "text-lg font-semibold tabular-nums",
-            warn && "text-destructive"
-          )}
-        >
-          {value}
-        </div>
-        {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
-      </CardContent>
-    </Card>
-  )
-}
-
-// ───────────────────────────── Entries ─────────────────────────────

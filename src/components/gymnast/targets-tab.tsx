@@ -6,21 +6,17 @@ import {
   deleteTarget,
   saveTarget,
   setTargetStatus,
-} from "@/server/functions/progress"
+} from "@/server/functions/targets"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SkillStatusBadge } from "@/components/badges"
-import {
-  EmptyState,
-  Field,
-  FormError,
-  NativeSelect,
-  formValues,
-  useAction,
-} from "@/components/form"
-import { SKILL_STATUSES, daysUntil, formatDate, labelFor } from "@/lib/domain"
+import { Field, FormError, NativeSelect, formValues } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
+import { useAction } from "@/lib/use-action"
+import { SKILL_STATUSES, labelFor } from "@/lib/domain"
+import { daysUntil, formatDate } from "@/lib/dates"
 import { useCan } from "@/lib/use-user"
 import type { GymnastData } from "./data"
 
@@ -255,5 +251,3 @@ export function TargetsTab({ data }: { data: GymnastData }) {
     </div>
   )
 }
-
-// ───────────────────────────── Competitions ─────────────────────────────

@@ -1,17 +1,8 @@
 import * as React from "react"
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { KeyRound, Plus } from "lucide-react"
-import { createUser, listUsers, updateUser } from "@/server/auth-functions"
+import { listUsers, updateUser } from "@/server/functions/users"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   Table,
   TableBody,
@@ -20,15 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Field,
-  FormError,
-  NativeSelect,
-  formValues,
-  useAction,
-} from "@/components/form"
+import { FormError, NativeSelect } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { useUser } from "@/lib/use-user"
-import { MIN_PASSWORD_LENGTH, ROLES, type UserRow } from "@/lib/domain"
+import { type UserRow } from "@/lib/domain"
+import { ROLES } from "@/lib/roles"
+import { AddUserDialog } from "@/components/user/add-user-dialog"
+import { ResetPasswordDialog } from "@/components/user/reset-password-dialog"
 
 export const Route = createFileRoute("/users")({
   beforeLoad: ({ context }) => {
@@ -159,149 +148,5 @@ function UsersPage() {
         onClose={() => setResetting(null)}
       />
     </div>
-  )
-}
-
-function AddUserDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean
-  onOpenChange: (o: boolean) => void
-}) {
-  const router = useRouter()
-  const save = useAction(async (form: HTMLFormElement) => {
-    const v = formValues(form)
-    await createUser({
-      data: {
-        name: v.name,
-        email: v.email,
-        role: v.role,
-        password: v.password,
-      },
-    })
-    await router.invalidate()
-    onOpenChange(false)
-  })
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add user</DialogTitle>
-          <DialogDescription>
-            Give them this temporary password. They can change it from their
-            account page.
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            save.run(e.currentTarget)
-          }}
-        >
-          <Field label="Name" htmlFor="new_name">
-            <Input id="new_name" name="name" required />
-          </Field>
-          <Field label="Email" htmlFor="new_email">
-            <Input
-              id="new_email"
-              name="email"
-              type="email"
-              required
-              autoComplete="off"
-            />
-          </Field>
-          <Field label="Role" htmlFor="new_role">
-            <NativeSelect id="new_role" name="role" defaultValue="coach">
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </NativeSelect>
-          </Field>
-          <Field label="Temporary password" htmlFor="new_password">
-            <Input
-              id="new_password"
-              name="password"
-              type="text"
-              autoComplete="off"
-              minLength={MIN_PASSWORD_LENGTH}
-              required
-            />
-          </Field>
-          <FormError error={save.error} />
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={save.pending}>
-              {save.pending ? "Adding…" : "Add user"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function ResetPasswordDialog({
-  user,
-  onClose,
-}: {
-  user: UserRow | null
-  onClose: () => void
-}) {
-  const save = useAction(async (form: HTMLFormElement) => {
-    if (!user) return
-    await updateUser({
-      data: { id: user.id, password: formValues(form).password },
-    })
-    onClose()
-  })
-  return (
-    <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Reset password for {user?.name}</DialogTitle>
-          <DialogDescription>
-            They&apos;ll be signed out everywhere and need this new password to
-            sign in.
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          className="flex flex-col gap-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            save.run(e.currentTarget)
-          }}
-        >
-          <Field label="New temporary password" htmlFor="reset_password">
-            <Input
-              id="reset_password"
-              name="password"
-              type="text"
-              autoComplete="off"
-              minLength={MIN_PASSWORD_LENGTH}
-              required
-            />
-          </Field>
-          <FormError error={save.error} />
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={save.pending}>
-              {save.pending ? "Saving…" : "Reset password"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   )
 }

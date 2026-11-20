@@ -1,12 +1,14 @@
 import * as React from "react"
 import { createFileRoute } from "@tanstack/react-router"
-import { changeOwnPassword } from "@/server/auth-functions"
+import { changeOwnPassword } from "@/server/functions/account"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Field, FormError, formValues, useAction } from "@/components/form"
+import { Field, FormError, formValues } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { useUser } from "@/lib/use-user"
-import { MIN_PASSWORD_LENGTH, ROLES, labelFor } from "@/lib/domain"
+import { MIN_PASSWORD_LENGTH, labelFor } from "@/lib/domain"
+import { ROLES } from "@/lib/roles"
 
 export const Route = createFileRoute("/account")({
   component: AccountPage,

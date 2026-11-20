@@ -7,7 +7,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { EmptyState, FormError } from "@/components/form"
+import { FormError } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
 import { useCan } from "@/lib/use-user"
 import { type CompetitionData, useEntryUpdate } from "./data"
 

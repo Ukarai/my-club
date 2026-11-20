@@ -3,8 +3,8 @@
 // in production builds, so none of it can be used on a deployed site.
 import { randomBytes } from "node:crypto"
 import { run } from "./db"
-import { hashPassword } from "./auth"
-import type { Role } from "@/lib/domain"
+import { hashPassword } from "./passwords"
+import type { Role } from "@/lib/roles"
 
 export const TEST_LOGIN_ENABLED = import.meta.env.DEV
 

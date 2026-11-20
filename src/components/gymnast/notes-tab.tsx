@@ -8,15 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { NoteCategoryBadge } from "@/components/badges"
-import {
-  EmptyState,
-  Field,
-  FormError,
-  NativeSelect,
-  formValues,
-  useAction,
-} from "@/components/form"
-import { NOTE_CATEGORIES, formatDate, today } from "@/lib/domain"
+import { Field, FormError, NativeSelect, formValues } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
+import { useAction } from "@/lib/use-action"
+import { NOTE_CATEGORIES } from "@/lib/domain"
+import { formatDate, today } from "@/lib/dates"
 import { useCan } from "@/lib/use-user"
 import type { GymnastData } from "./data"
 
@@ -186,5 +182,3 @@ export function NotesTab({ data }: { data: GymnastData }) {
     </div>
   )
 }
-
-// ───────────────────────────── Targets ─────────────────────────────

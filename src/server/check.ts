@@ -3,6 +3,7 @@
 // the database unchecked. Problems someone can cause from a form get a
 // message written for them; anything else (a stale page or a hand-made
 // request) gets a general one.
+import { MIN_PASSWORD_LENGTH } from "@/lib/domain"
 import { z } from "zod"
 
 const BAD = "That request wasn't valid. Refresh the page and try again."
@@ -85,3 +86,23 @@ export const optionalDate = (label: string) =>
  * (forms send plain strings) and rejects anything not in the list. */
 export const oneOf = <const T extends string>(list: readonly { value: T }[]) =>
   z.string().pipe(z.enum(list.map((i) => i.value) as [T, ...T[]]))
+
+/** A new password. Not trimmed: spaces are allowed in passwords. */
+export const newPassword = z
+  .string()
+  .min(
+    MIN_PASSWORD_LENGTH,
+    `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+  )
+  .max(MAX.password, `Password must be ${MAX.password} characters or fewer`)
+
+/** A password being checked, which only needs to be a sensible size. */
+export const givenPassword = z.string().max(MAX.password)
+
+/** An email address, trimmed and lower-cased. */
+export const email = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(MAX.email, `Email must be ${MAX.email} characters or fewer`)
+  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address")

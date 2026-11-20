@@ -1,15 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { listTestAccounts, login, testLogin } from "@/server/auth-functions"
+import { login } from "@/server/functions/session"
+import { listTestAccounts, testLogin } from "@/server/functions/test-login"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Field,
-  FormError,
-  NativeSelect,
-  formValues,
-  useAction,
-} from "@/components/form"
-import { ROLES, labelFor } from "@/lib/domain"
+import { Field, FormError, NativeSelect, formValues } from "@/components/form"
+import { useAction } from "@/lib/use-action"
+import { labelFor } from "@/lib/domain"
+import { ROLES } from "@/lib/roles"
 import { AuthCard, safeRedirect } from "@/components/auth-card"
 
 export const Route = createFileRoute("/login")({

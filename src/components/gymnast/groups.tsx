@@ -1,9 +1,13 @@
 import * as React from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { Plus, X } from "lucide-react"
-import { addGroupMembers, removeGroupMember } from "@/server/functions/groups"
+import {
+  addGroupMembers,
+  removeGroupMember,
+} from "@/server/functions/group-members"
 import { GroupBadge } from "@/components/badges"
-import { FormError, NativeSelect, useAction } from "@/components/form"
+import { FormError, NativeSelect } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { useCan } from "@/lib/use-user"
 import type { GymnastData } from "./data"
 

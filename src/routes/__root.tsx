@@ -1,3 +1,4 @@
+import type * as React from "react"
 import {
   HeadContent,
   Scripts,
@@ -6,8 +7,8 @@ import {
 } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { TanStackDevtools } from "@tanstack/react-devtools"
-import { getSession } from "@/server/auth-functions"
-import { AppShell } from "@/components/app-shell"
+import { getSession } from "@/server/functions/session"
+import { AppShell } from "@/components/shell/app-shell"
 import { CLUB } from "@/lib/club"
 
 import appCss from "../styles.css?url"

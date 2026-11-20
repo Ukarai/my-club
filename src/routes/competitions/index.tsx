@@ -1,60 +1,18 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { listCompetitions } from "@/server/functions/competitions"
 import { Button } from "@/components/ui/button"
-import { CompetitionStatusBadge } from "@/components/badges"
-import { EmptyState } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
 import { CompetitionDialog } from "@/components/competition-form"
 import { useDialog } from "@/components/gymnast-form"
 import { useCan } from "@/lib/use-user"
-import {
-  daysUntil,
-  formatDate,
-  today,
-  type CompetitionSummary,
-} from "@/lib/domain"
+import { today } from "@/lib/dates"
+import { CompetitionRow } from "@/components/competition/competition-row"
 
 export const Route = createFileRoute("/competitions/")({
   loader: () => listCompetitions(),
   component: Competitions,
 })
-
-function CompetitionRow({ c }: { c: CompetitionSummary }) {
-  const days = daysUntil(c.start_date)
-  return (
-    <Link
-      to="/competitions/$competitionId"
-      params={{ competitionId: String(c.id) }}
-      className="surface flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-[#f6f8fb]"
-    >
-      <div className="min-w-0">
-        <div className="font-medium">{c.name}</div>
-        <div className="text-sm text-muted-foreground">
-          {formatDate(c.start_date)}
-          {c.end_date &&
-            c.end_date !== c.start_date &&
-            ` – ${formatDate(c.end_date)}`}
-          {c.venue && ` · ${c.venue}`}
-          {c.level && ` · ${c.level}`}
-        </div>
-      </div>
-      <div className="flex items-center gap-4 text-sm">
-        {days >= 0 && (
-          <span className="text-muted-foreground">
-            {days === 0 ? "Today" : `${days} days`}
-          </span>
-        )}
-        <span className="tabular-nums">{c.entry_count} entries</span>
-        {c.open_tasks > 0 && (
-          <span className="text-muted-foreground tabular-nums">
-            {c.open_tasks} tasks open
-          </span>
-        )}
-        <CompetitionStatusBadge status={c.status} />
-      </div>
-    </Link>
-  )
-}
 
 function Competitions() {
   const comps = Route.useLoaderData()

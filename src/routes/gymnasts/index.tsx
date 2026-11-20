@@ -13,10 +13,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { EmptyState, NativeSelect } from "@/components/form"
+import { NativeSelect } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
 import { GroupDot, InjuryBadge } from "@/components/badges"
 import { GymnastDialog, useDialog } from "@/components/gymnast-form"
-import { ageFrom } from "@/lib/domain"
+import { ageFrom } from "@/lib/dates"
 import { useCan } from "@/lib/use-user"
 
 export const Route = createFileRoute("/gymnasts/")({

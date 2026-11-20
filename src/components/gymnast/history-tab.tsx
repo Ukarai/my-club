@@ -1,5 +1,5 @@
 import { ActivityList } from "@/components/activity-list"
-import { EmptyState } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
 import type { GymnastData } from "./data"
 
 /** Everything done to this gymnast's records, and who did it. */

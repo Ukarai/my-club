@@ -2,11 +2,11 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
 import { listCoaches, listGroups } from "@/server/functions/groups"
 import { Button } from "@/components/ui/button"
-import { EmptyState } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
 import { GroupDot } from "@/components/badges"
 import { GroupDialog } from "@/components/group-form"
 import { useDialog } from "@/components/gymnast-form"
-import { hasRole } from "@/lib/domain"
+import { hasRole } from "@/lib/roles"
 import { useCan, useUser } from "@/lib/use-user"
 
 export const Route = createFileRoute("/groups/")({

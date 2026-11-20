@@ -1,8 +1,9 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router"
-import { createFirstAdmin } from "@/server/auth-functions"
+import { createFirstAdmin } from "@/server/functions/session"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Field, FormError, formValues, useAction } from "@/components/form"
+import { Field, FormError, formValues } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { AuthCard } from "@/components/auth-card"
 import { MIN_PASSWORD_LENGTH } from "@/lib/domain"
 

@@ -2,7 +2,7 @@ import * as React from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { Plus, Trash2 } from "lucide-react"
 import { cn } from "cn"
-import { addEntries, removeEntry } from "@/server/functions/competitions"
+import { removeEntry, addEntries } from "@/server/functions/competition-entries"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,14 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  EmptyState,
-  Field,
-  FormError,
-  NativeSelect,
-  formValues,
-  useAction,
-} from "@/components/form"
+import { Field, FormError, NativeSelect, formValues } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
+import { useAction } from "@/lib/use-action"
 import { ENTRY_STATUSES, type Entry } from "@/lib/domain"
 import { useCan } from "@/lib/use-user"
 import { type CompetitionData, useEntryUpdate } from "./data"
@@ -216,5 +211,3 @@ export function EntriesTab({ data }: { data: CompetitionData }) {
     </div>
   )
 }
-
-// ───────────────────────────── Routines ─────────────────────────────

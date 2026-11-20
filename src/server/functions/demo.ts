@@ -1,7 +1,8 @@
 // Demo data for trying the app out on an empty database.
 import { createServerFn } from "@tanstack/react-start"
 import { requireRole } from "../auth"
-import { SKILL_HISTORY_TO_ACTIVITY, db, get, run, tx } from "../db"
+import { db, get, run, tx } from "../db"
+import { SKILL_HISTORY_TO_ACTIVITY } from "../migrations"
 import { logActivity } from "../activity"
 import type { SkillStatus } from "@/lib/domain"
 

@@ -1,11 +1,9 @@
 // Loader data for the competition page, plus helpers its tabs share.
 import { useRouter } from "@tanstack/react-router"
-import { useAction } from "@/components/form"
-import { updateEntry } from "@/server/functions/competitions"
-import type {
-  EntryPatch,
-  getCompetition,
-} from "@/server/functions/competitions"
+import { useAction } from "@/lib/use-action"
+import { updateEntry } from "@/server/functions/competition-entries"
+import type { getCompetition } from "@/server/functions/competitions"
+import type { EntryPatch } from "@/server/functions/competition-entries"
 
 export type CompetitionData = Awaited<ReturnType<typeof getCompetition>>
 

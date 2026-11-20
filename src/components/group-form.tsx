@@ -10,13 +10,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Field,
-  FormError,
-  NativeSelect,
-  formValues,
-  useAction,
-} from "@/components/form"
+import { Field, FormError, NativeSelect, formValues } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { GROUP_COLOR_STYLES } from "@/components/badges"
 import { saveGroup } from "@/server/functions/groups"
 import { GROUP_COLORS, type CoachOption, type Group } from "@/lib/domain"

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router"
 import { EntryStatusBadge } from "@/components/badges"
-import { EmptyState } from "@/components/form"
-import { formatDate } from "@/lib/domain"
+import { EmptyState } from "@/components/empty-state"
+import { formatDate } from "@/lib/dates"
 import type { GymnastData } from "./data"
 
 export function CompetitionsTab({ data }: { data: GymnastData }) {
@@ -47,5 +47,3 @@ export function CompetitionsTab({ data }: { data: GymnastData }) {
     </div>
   )
 }
-
-// ───────────────────────────── History ─────────────────────────────

@@ -1,4 +1,5 @@
 // Shared domain types and label maps used by both server and client code.
+import type { Role } from "@/lib/roles"
 
 export const SKILL_STATUSES = [
   {
@@ -27,6 +28,7 @@ export const SKILL_STATUSES = [
     hint: "Performed within a routine",
   },
 ] as const
+
 export type SkillStatus = (typeof SKILL_STATUSES)[number]["value"]
 
 export const NOTE_CATEGORIES = [
@@ -35,6 +37,7 @@ export const NOTE_CATEGORIES = [
   { value: "coaching", label: "Coaching" },
   { value: "achievement", label: "Achievement" },
 ] as const
+
 export type NoteCategory = (typeof NOTE_CATEGORIES)[number]["value"]
 
 export const SKILL_NOTE_KINDS = [
@@ -49,6 +52,7 @@ export const SKILL_NOTE_KINDS = [
     hint: "Something to keep in mind whenever coaching this skill",
   },
 ] as const
+
 export type SkillNoteKind = (typeof SKILL_NOTE_KINDS)[number]["value"]
 
 export const GROUP_COLORS = [
@@ -61,6 +65,7 @@ export const GROUP_COLORS = [
   "orange",
   "slate",
 ] as const
+
 export type GroupColor = (typeof GROUP_COLORS)[number]
 
 export type Group = {
@@ -85,6 +90,7 @@ export const TARGET_STATUSES = [
   { value: "achieved", label: "Achieved" },
   { value: "dropped", label: "Dropped" },
 ] as const
+
 export type TargetStatus = (typeof TARGET_STATUSES)[number]["value"]
 
 export const COMPETITION_STATUSES = [
@@ -94,6 +100,7 @@ export const COMPETITION_STATUSES = [
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
 ] as const
+
 export type CompetitionStatus = (typeof COMPETITION_STATUSES)[number]["value"]
 
 export const ENTRY_STATUSES = [
@@ -102,6 +109,7 @@ export const ENTRY_STATUSES = [
   { value: "confirmed", label: "Confirmed" },
   { value: "withdrawn", label: "Withdrawn" },
 ] as const
+
 export type EntryStatus = (typeof ENTRY_STATUSES)[number]["value"]
 
 export const SKILL_CATEGORIES = [
@@ -111,30 +119,6 @@ export const SKILL_CATEGORIES = [
   "Twisting",
   "Multiple somersaults",
 ] as const
-
-export const ROLES = [
-  {
-    value: "admin",
-    label: "Admin",
-    hint: "Everything, including competitions, managing users, the skill catalogue and deleting records",
-  },
-  {
-    value: "coach",
-    label: "Coach",
-    hint: "Record progress, notes and targets, manage gymnasts and groups, and edit competition routines unless locked",
-  },
-  {
-    value: "viewer",
-    label: "Viewer",
-    hint: "Read-only; medical and contact details are hidden",
-  },
-] as const
-export type Role = (typeof ROLES)[number]["value"]
-
-const ROLE_RANK: Record<Role, number> = { viewer: 0, coach: 1, admin: 2 }
-export function hasRole(user: { role: Role } | null | undefined, min: Role) {
-  return !!user && ROLE_RANK[user.role] >= ROLE_RANK[min]
-}
 
 export type SessionUser = {
   id: number
@@ -323,42 +307,4 @@ export type CompTask = {
   due_date: string | null
   assignee: string | null
   done: number
-}
-
-export function today() {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-export function formatDate(iso: string | null | undefined) {
-  if (!iso) return ""
-  const [y, m, d] = iso.slice(0, 10).split("-").map(Number)
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  })
-}
-
-export function ageFrom(dob: string | null) {
-  if (!dob) return null
-  const [y, m, d] = dob.split("-").map(Number)
-  const now = new Date()
-  let age = now.getFullYear() - y
-  if (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d))
-    age--
-  return age
-}
-
-export function daysUntil(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number)
-  const target = new Date(y, m - 1, d).getTime()
-  const now = new Date()
-  const start = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  ).getTime()
-  return Math.round((target - start) / 86_400_000)
 }

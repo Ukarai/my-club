@@ -56,6 +56,26 @@ export function skillName(id: number) {
   return row.name
 }
 
+/** A competition's name. Throws when there's no such competition. */
+export function competitionName(competitionId: number) {
+  const c = get<{ name: string }>(
+    "SELECT name FROM competitions WHERE id = ?",
+    competitionId
+  )
+  if (!c) throw new Error("Competition not found")
+  return c.name
+}
+
+/** A group's name. Throws when there's no such group. */
+export function groupSubject(groupId: number) {
+  const g = get<{ name: string }>(
+    "SELECT name FROM club_groups WHERE id = ?",
+    groupId
+  )
+  if (!g) throw new Error("Group not found")
+  return g.name
+}
+
 /** "a", "a and b", "a, b and c". */
 export function listPhrase(items: string[]) {
   return items.length <= 1

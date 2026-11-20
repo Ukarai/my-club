@@ -7,7 +7,7 @@ import { z } from "zod"
 import { requireRole } from "../auth"
 import { all, get } from "../db"
 import { check } from "../check"
-import { today } from "@/lib/domain"
+import { today } from "@/lib/dates"
 import type {
   CompetitionSummary,
   GroupSummary,

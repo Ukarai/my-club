@@ -4,7 +4,8 @@ import { z } from "zod"
 import { requireRole } from "../auth"
 import { all } from "../db"
 import { MAX, check } from "../check"
-import { ACTIVITY_PAGE_SIZE, hasRole } from "@/lib/domain"
+import { ACTIVITY_PAGE_SIZE } from "@/lib/domain"
+import { hasRole } from "@/lib/roles"
 import type { Activity } from "@/lib/domain"
 
 export const listActivity = createServerFn({ method: "GET" })

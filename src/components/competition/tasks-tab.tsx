@@ -5,17 +5,13 @@ import {
   deleteTask,
   saveTask,
   setTaskDone,
-} from "@/server/functions/competitions"
+} from "@/server/functions/competition-tasks"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  EmptyState,
-  Field,
-  FormError,
-  formValues,
-  useAction,
-} from "@/components/form"
-import { daysUntil, formatDate } from "@/lib/domain"
+import { Field, FormError, formValues } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
+import { useAction } from "@/lib/use-action"
+import { daysUntil, formatDate } from "@/lib/dates"
 import { useCan } from "@/lib/use-user"
 import type { CompetitionData } from "./data"
 
@@ -136,5 +132,3 @@ export function TasksTab({ data }: { data: CompetitionData }) {
     </div>
   )
 }
-
-// ───────────────────────────── Results ─────────────────────────────

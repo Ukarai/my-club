@@ -2,8 +2,10 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { listActivity } from "@/server/functions/activity"
 import { ActivityList } from "@/components/activity-list"
 import { Button } from "@/components/ui/button"
-import { EmptyState, NativeSelect } from "@/components/form"
-import { ACTIVITY_PAGE_SIZE, hasRole } from "@/lib/domain"
+import { NativeSelect } from "@/components/form"
+import { EmptyState } from "@/components/empty-state"
+import { ACTIVITY_PAGE_SIZE } from "@/lib/domain"
+import { hasRole } from "@/lib/roles"
 
 type ActivitySearch = { who?: string; limit?: number }
 

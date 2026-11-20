@@ -10,7 +10,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Field, FormError, formValues, useAction } from "@/components/form"
+import { Field, FormError, formValues } from "@/components/form"
+import { useAction } from "@/lib/use-action"
 import { saveGymnast } from "@/server/functions/gymnasts"
 import type { Gymnast } from "@/lib/domain"
 

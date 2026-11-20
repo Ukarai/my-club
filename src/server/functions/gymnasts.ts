@@ -10,7 +10,8 @@ import {
   gymnastName,
   logActivity,
 } from "../activity"
-import { hasRole, today } from "@/lib/domain"
+import { hasRole } from "@/lib/roles"
+import { today } from "@/lib/dates"
 import type {
   Activity,
   Group,
@@ -116,6 +117,7 @@ const gymnastInput = z.object({
   guardian_contact: optionalText("Contact", MAX.contact),
   medical_info: optionalText("Medical info", MAX.text),
 })
+
 export type GymnastInput = z.input<typeof gymnastInput>
 
 // Field names for the log. Values aren't logged, so viewers who can read a

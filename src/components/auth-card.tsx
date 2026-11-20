@@ -1,5 +1,5 @@
 import type * as React from "react"
-import { ClubLogo } from "@/components/avatar"
+import { ClubLogo } from "@/components/club-logo"
 import { CLUB } from "@/lib/club"
 import {
   Card,
