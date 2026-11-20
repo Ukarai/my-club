@@ -78,11 +78,11 @@ export function TasksTab({ data }: { data: CompetitionData }) {
         </EmptyState>
       ) : (
         <fieldset disabled={!canEdit} className="min-w-0">
-          <ul className="flex flex-col divide-y rounded-2xl border">
+          <ul className="surface flex flex-col divide-y divide-divider overflow-hidden">
             {data.tasks.map((t) => {
               const overdue = !t.done && t.due_date && daysUntil(t.due_date) < 0
               return (
-                <li key={t.id} className="flex items-center gap-3 px-3 py-2">
+                <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
                   <input
                     type="checkbox"
                     className="size-4"

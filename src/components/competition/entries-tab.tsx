@@ -69,7 +69,7 @@ export function EntriesTab({ data }: { data: CompetitionData }) {
         ) : (
           <fieldset
             disabled={!canEdit}
-            className="min-w-0 overflow-x-auto rounded-2xl border"
+            className="surface min-w-0 overflow-x-auto"
           >
             <Table>
               <TableHeader>

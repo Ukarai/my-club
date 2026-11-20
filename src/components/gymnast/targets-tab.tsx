@@ -148,7 +148,7 @@ export function TargetsTab({ data }: { data: GymnastData }) {
             <div
               key={t.id}
               className={cn(
-                "flex flex-col gap-2 rounded-2xl border p-3",
+                "surface flex flex-col gap-2 p-3",
                 t.status !== "active" && "opacity-60"
               )}
             >

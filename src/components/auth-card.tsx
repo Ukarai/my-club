@@ -1,4 +1,6 @@
 import type * as React from "react"
+import { ClubLogo } from "@/components/avatar"
+import { CLUB } from "@/lib/club"
 import {
   Card,
   CardContent,
@@ -18,11 +20,14 @@ export function AuthCard({
 }) {
   return (
     <div className="mx-auto flex max-w-sm flex-col gap-6 pt-12">
-      <div className="flex items-center justify-center gap-2 text-lg font-semibold">
-        <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground">
-          ⤒
-        </span>
-        My Club
+      <div className="flex flex-col items-center gap-3 text-center">
+        <ClubLogo className="size-20 shadow-[0_0_0_4px_var(--sidebar)]" />
+        <div className="flex flex-col leading-tight">
+          <span className="text-xl font-extrabold tracking-tight">
+            {CLUB.name}
+          </span>
+          <span className="text-sm text-muted-foreground">{CLUB.tagline}</span>
+        </div>
       </div>
       <Card>
         <CardHeader>

@@ -95,10 +95,6 @@ export function SkillsTab({ data }: { data: GymnastData }) {
   }
 
   const categories = [...new Set(data.skills.map((s) => s.category))]
-  const counts = SKILL_STATUSES.map((st) => ({
-    ...st,
-    n: data.gymnastSkills.filter((x) => x.status === st.value).length,
-  }))
   const matches = (skillId: number) =>
     filter === "all" ||
     (filter === "notes"
@@ -111,7 +107,7 @@ export function SkillsTab({ data }: { data: GymnastData }) {
         <Card size="sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Crosshair className="size-4 text-sky-600 dark:text-sky-400" />
+              <Crosshair className="size-4 text-primary" />
               Current focus
             </CardTitle>
           </CardHeader>
@@ -131,46 +127,37 @@ export function SkillsTab({ data }: { data: GymnastData }) {
         </Card>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          {counts.map((c) => (
-            <span
-              key={c.value}
-              title={c.hint}
-              className={cn(
-                "rounded-2xl px-2.5 py-1 text-xs font-medium",
-                SKILL_STATUS_STYLES[c.value]
-              )}
-            >
-              {c.label}: {c.n}
-            </span>
-          ))}
-        </div>
-        <NativeSelect
-          className="w-auto"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as SkillFilter)}
-          aria-label="Filter skills"
-        >
-          <option value="all">All skills</option>
-          <option value="tracked">Started</option>
-          <option value="untracked">Not started</option>
-          <option value="notes">With notes</option>
-        </NativeSelect>
+      <div className="flex justify-end">
+        <label className="inline-flex items-center gap-2 text-[13px] text-muted-foreground">
+          Show
+          <NativeSelect
+            className="h-9 w-auto font-semibold md:text-[13px]"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as SkillFilter)}
+          >
+            <option value="all">All skills</option>
+            <option value="tracked">Started</option>
+            <option value="untracked">Not started</option>
+            <option value="notes">With notes</option>
+          </NativeSelect>
+        </label>
       </div>
       <FormError error={error} />
 
       {categories.map((cat) => {
-        const skills = data.skills.filter(
-          (s) => s.category === cat && matches(s.id)
-        )
+        const inCategory = data.skills.filter((s) => s.category === cat)
+        const skills = inCategory.filter((s) => matches(s.id))
         if (!skills.length) return null
+        const started = inCategory.filter((s) => statusBySkill.has(s.id))
         return (
-          <Card key={cat} size="sm">
-            <CardHeader>
+          <Card key={cat} className="gap-0 pb-0">
+            <CardHeader className="grid-cols-[1fr_auto] md:py-3">
               <CardTitle>{cat}</CardTitle>
+              <span className="text-xs text-muted-foreground">
+                {started.length} of {inCategory.length} started
+              </span>
             </CardHeader>
-            <CardContent className="flex flex-col divide-y">
+            <div className="flex flex-col">
               {skills.map((s) => {
                 const current = statusBySkill.get(s.id)
                 const notes = notesBySkill.get(s.id) ?? []
@@ -178,69 +165,90 @@ export function SkillsTab({ data }: { data: GymnastData }) {
                 const focus = activeNotes.find((n) => n.kind === "focus")
                 const isOpen = open.has(s.id)
                 return (
-                  <div key={s.id} id={`skill-${s.id}`} className="py-2">
+                  <div
+                    key={s.id}
+                    id={`skill-${s.id}`}
+                    className="border-b border-divider px-4 py-3 last:border-b-0 md:px-5"
+                  >
                     <div
                       className={cn(
-                        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
+                        "flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5",
                         pendingSkill === s.id && "opacity-60"
                       )}
                     >
-                      <div className="min-w-0">
-                        <div className="font-medium">
+                      <div className="flex min-w-0 flex-[1_1_220px] flex-col gap-0.5 max-sm:basis-0">
+                        <div className="text-sm font-semibold">
                           {s.name}{" "}
-                          <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                          <span className="text-xs font-medium text-[#66768c] tabular-nums">
                             {s.tariff.toFixed(1)}
                           </span>
                         </div>
-                        {current && (
-                          <div className="text-xs text-muted-foreground">
-                            Updated {formatDate(current.updated_at)}
-                            {current.updated_by && ` by ${current.updated_by}`}
-                          </div>
-                        )}
+                        <div className="text-xs text-muted-foreground">
+                          {current ? (
+                            <>
+                              Updated {formatDate(current.updated_at)}
+                              {current.updated_by &&
+                                ` by ${current.updated_by}`}
+                            </>
+                          ) : (
+                            <span className="text-[#66768c]">Not started</span>
+                          )}
+                        </div>
                         {focus && !isOpen && (
-                          <p className="mt-0.5 line-clamp-2 text-xs text-sky-700 dark:text-sky-300">
+                          <p className="mt-0.5 line-clamp-2 text-xs text-primary-dark">
                             <span className="font-medium">Focus:</span>{" "}
                             {focus.body}
                           </p>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-1">
-                        {SKILL_STATUSES.map((st) => {
-                          const active = current?.status === st.value
-                          return (
-                            <button
-                              key={st.value}
-                              type="button"
-                              title={st.hint}
-                              disabled={!canEdit || pendingSkill === s.id}
-                              onClick={() => !active && update(s.id, st.value)}
-                              aria-pressed={active}
-                              className={cn(
-                                "rounded-2xl px-2 py-1 text-xs transition-colors",
-                                active
-                                  ? cn(
-                                      SKILL_STATUS_STYLES[st.value],
-                                      "font-semibold ring-1 ring-current/30"
-                                    )
-                                  : "text-muted-foreground hover:bg-muted"
-                              )}
-                            >
-                              {st.label}
-                            </button>
-                          )
-                        })}
-                        {current && (
+                      {/* On phones the switch drops onto its own full-width line. */}
+                      <div className="flex items-center gap-1 max-sm:contents">
+                        <div
+                          role="group"
+                          aria-label={`Status of ${s.name}`}
+                          className="grid grid-cols-[repeat(5,auto)] gap-0.5 rounded-[10px] border border-[#d6dfeb] bg-muted p-[3px] max-sm:order-last max-sm:w-full sm:flex"
+                        >
+                          {SKILL_STATUSES.map((st) => {
+                            const active = current?.status === st.value
+                            return (
+                              <button
+                                key={st.value}
+                                type="button"
+                                title={st.hint}
+                                disabled={!canEdit || pendingSkill === s.id}
+                                onClick={() =>
+                                  !active && update(s.id, st.value)
+                                }
+                                aria-pressed={active}
+                                className={cn(
+                                  "min-h-[30px] rounded-[7px] px-1 text-[11px] leading-tight transition-colors sm:px-2.5 sm:text-xs",
+                                  active
+                                    ? cn(
+                                        SKILL_STATUS_STYLES[st.value].solid,
+                                        "font-bold text-white shadow-[0_1px_3px_rgb(11_31_61/0.3)]"
+                                      )
+                                    : "font-medium text-muted-foreground enabled:hover:bg-white enabled:hover:text-foreground"
+                                )}
+                              >
+                                {st.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {current && canEdit ? (
                           <button
                             type="button"
                             title="Clear status"
                             aria-label={`Clear ${s.name}`}
-                            disabled={!canEdit || pendingSkill === s.id}
+                            disabled={pendingSkill === s.id}
                             onClick={() => update(s.id, null)}
-                            className="rounded-2xl p-1 text-muted-foreground hover:bg-muted"
+                            className="flex size-9 shrink-0 items-center justify-center rounded-[9px] text-[#66768c] hover:bg-muted hover:text-foreground"
                           >
-                            <X className="size-3.5" />
+                            <X className="size-4" />
                           </button>
+                        ) : (
+                          // Keeps the switches lined up from row to row.
+                          <span aria-hidden className="size-9 shrink-0" />
                         )}
                         {(canEdit || notes.length > 0) && (
                           <button
@@ -250,13 +258,13 @@ export function SkillsTab({ data }: { data: GymnastData }) {
                             aria-label={`Notes for ${s.name}`}
                             title="Skill notes"
                             className={cn(
-                              "ml-1 flex items-center gap-1 rounded-2xl px-2 py-1 text-xs transition-colors hover:bg-muted",
+                              "flex h-9 shrink-0 items-center gap-1 rounded-[9px] px-2 text-xs font-semibold transition-colors hover:bg-muted",
                               isOpen || activeNotes.length > 0
-                                ? "text-foreground"
-                                : "text-muted-foreground"
+                                ? "text-primary"
+                                : "text-[#66768c]"
                             )}
                           >
-                            <MessageSquareText className="size-3.5" />
+                            <MessageSquareText className="size-[17px]" />
                             {activeNotes.length > 0 ? activeNotes.length : null}
                             <ChevronDown
                               className={cn(
@@ -278,7 +286,7 @@ export function SkillsTab({ data }: { data: GymnastData }) {
                   </div>
                 )
               })}
-            </CardContent>
+            </div>
           </Card>
         )
       })}
@@ -294,9 +302,8 @@ export function SkillsTab({ data }: { data: GymnastData }) {
 }
 
 const SKILL_NOTE_KIND_STYLES: Record<SkillNoteKind, string> = {
-  focus: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  coaching_point:
-    "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
+  focus: "bg-primary-soft text-primary-dark",
+  coaching_point: "bg-[#ebe4fc] text-[#5634b8]",
 }
 
 function SkillNotesPanel({
@@ -537,5 +544,3 @@ function SkillNoteItem({
     </div>
   )
 }
-
-// ───────────────────────────── Notes ─────────────────────────────

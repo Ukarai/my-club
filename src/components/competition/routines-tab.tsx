@@ -39,7 +39,7 @@ function RoutineLock({ data }: { data: CompetitionData }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3 text-sm",
+        "surface flex flex-wrap items-center justify-between gap-3 p-3 text-sm",
         locked &&
           "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/40"
       )}

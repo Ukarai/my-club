@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Lock, Pencil, Trash2 } from "lucide-react"
+import { ChevronLeft, Lock, Pencil, Trash2 } from "lucide-react"
 import { cn } from "cn"
 import {
   deleteCompetition,
@@ -7,7 +7,13 @@ import {
 } from "@/server/functions/competitions"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  TabCount,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import { CompetitionStatusBadge } from "@/components/badges"
 import { FormError, useAction } from "@/components/form"
 import { CompetitionDialog } from "@/components/competition-form"
@@ -60,9 +66,9 @@ function CompetitionPage() {
         <div className="flex flex-col gap-1">
           <Link
             to="/competitions"
-            className="text-sm text-muted-foreground hover:underline"
+            className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-primary hover:text-primary-dark"
           >
-            ← Competitions
+            <ChevronLeft className="size-4" /> Competitions
           </Link>
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold">
             {c.name} <CompetitionStatusBadge status={c.status} />
@@ -136,7 +142,7 @@ function CompetitionPage() {
           navigate({ search: { tab: v as Tab }, replace: true })
         }
       >
-        <TabsList className="max-w-full overflow-x-auto overflow-y-hidden">
+        <TabsList>
           <TabsTrigger value="entries">Entries</TabsTrigger>
           <TabsTrigger value="routines">
             Routines
@@ -145,7 +151,7 @@ function CompetitionPage() {
             ) : null}
           </TabsTrigger>
           <TabsTrigger value="tasks">
-            Tasks{openTasks > 0 && ` (${openTasks})`}
+            Tasks <TabCount n={openTasks} />
           </TabsTrigger>
           <TabsTrigger value="results">Results</TabsTrigger>
         </TabsList>

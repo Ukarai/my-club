@@ -5,7 +5,7 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router"
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react"
+import { ChevronLeft, Pencil, Plus, Search, Trash2, X } from "lucide-react"
 import { cn } from "cn"
 import {
   addGroupMembers,
@@ -70,9 +70,9 @@ function GroupPage() {
         <div className="flex min-w-0 flex-col gap-1">
           <Link
             to="/groups"
-            className="text-sm text-muted-foreground hover:underline"
+            className="inline-flex w-fit items-center gap-1 text-sm font-semibold text-primary hover:text-primary-dark"
           >
-            ← Groups
+            <ChevronLeft className="size-4" /> Groups
           </Link>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
             <GroupDot color={g.color} className="size-3" />
@@ -115,7 +115,7 @@ function GroupPage() {
             {canEdit && "Pick gymnasts from the list to add them."}
           </EmptyState>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border">
+          <div className="surface overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

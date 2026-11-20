@@ -20,8 +20,13 @@ import { ageFrom } from "@/lib/domain"
 import { useCan } from "@/lib/use-user"
 
 export const Route = createFileRoute("/gymnasts/")({
-  validateSearch: (s: Record<string, unknown>): { group?: number } =>
-    Number(s.group) > 0 ? { group: Number(s.group) } : {},
+  // ?add=1 opens the "Add gymnast" dialog (used by the dashboard buttons).
+  validateSearch: (
+    s: Record<string, unknown>
+  ): { group?: number; add?: boolean } => ({
+    ...(Number(s.group) > 0 && { group: Number(s.group) }),
+    ...((s.add === true || s.add === 1 || s.add === "1") && { add: true }),
+  }),
   loader: async () => {
     const [gymnasts, groups] = await Promise.all([listGymnasts(), listGroups()])
     return { gymnasts, groups }
@@ -31,11 +36,22 @@ export const Route = createFileRoute("/gymnasts/")({
 
 function Gymnasts() {
   const { gymnasts, groups } = Route.useLoaderData()
-  const { group } = Route.useSearch()
+  const { group, add } = Route.useSearch()
   const navigate = useNavigate()
   const groupById = new Map(groups.map((gr) => [gr.id, gr]))
   const dialog = useDialog()
   const canEdit = useCan("coach")
+  const { show } = dialog
+
+  React.useEffect(() => {
+    if (!add) return
+    if (canEdit) show()
+    void navigate({
+      to: "/gymnasts",
+      search: group ? { group } : {},
+      replace: true,
+    })
+  }, [add, canEdit, group, navigate, show])
   const [query, setQuery] = React.useState("")
   const [squad, setSquad] = React.useState("")
   const [showArchived, setShowArchived] = React.useState(false)
@@ -122,7 +138,7 @@ function Gymnasts() {
           <p>Add gymnasts to start tracking their skills and progress.</p>
         </EmptyState>
       ) : (
-        <div className="rounded-2xl border">
+        <div className="surface overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>

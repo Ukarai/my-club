@@ -29,7 +29,7 @@ export function NativeSelect({
     <select
       data-slot="native-select"
       className={cn(
-        "h-8 w-full min-w-0 rounded-2xl border border-transparent bg-input/50 px-2.5 py-1 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-50 md:text-sm",
+        "h-8 w-full min-w-0 rounded-lg border border-input bg-card px-2.5 py-1 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-50 md:text-sm",
         className
       )}
       {...props}
@@ -85,7 +85,7 @@ export function EmptyState({
   children?: React.ReactNode
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+    <div className="flex flex-col items-center gap-2 rounded-[14px] border border-dashed border-[#a9b8cd] bg-card/60 p-8 text-center text-sm text-muted-foreground">
       <p className="font-medium text-foreground">{title}</p>
       {children}
     </div>

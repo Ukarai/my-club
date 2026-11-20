@@ -49,7 +49,7 @@ function Groups() {
               key={g.id}
               to="/groups/$groupId"
               params={{ groupId: String(g.id) }}
-              className="flex flex-col gap-1 rounded-2xl border p-4 hover:bg-muted"
+              className="surface flex flex-col gap-1 p-4 hover:bg-[#f6f8fb]"
             >
               <div className="flex items-center gap-2 font-medium">
                 <GroupDot color={g.color} />

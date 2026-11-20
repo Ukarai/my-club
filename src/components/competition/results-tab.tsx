@@ -23,10 +23,7 @@ export function ResultsTab({ data }: { data: CompetitionData }) {
   return (
     <div className="flex flex-col gap-3">
       <FormError error={upd.error} />
-      <fieldset
-        disabled={!canEdit}
-        className="min-w-0 overflow-x-auto rounded-2xl border"
-      >
+      <fieldset disabled={!canEdit} className="surface min-w-0 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

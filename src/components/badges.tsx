@@ -1,3 +1,4 @@
+import type * as React from "react"
 import { cn } from "cn"
 import {
   COMPETITION_STATUSES,
@@ -8,18 +9,75 @@ import {
 } from "@/lib/domain"
 
 const pill =
-  "inline-flex h-5 w-fit shrink-0 items-center rounded-2xl px-2 text-xs font-medium whitespace-nowrap"
+  "inline-flex h-6 w-fit shrink-0 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap"
 
-export const SKILL_STATUS_STYLES: Record<string, string> = {
-  learning: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  with_support:
-    "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  without_support: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  independent:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  in_routine:
-    "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
+/** Chip, dot and solid colours shared by every status badge. */
+const TONES = {
+  grey: {
+    chip: "bg-[#e7ecf3] text-[#364660]",
+    dot: "bg-[#7a889c]",
+    solid: "bg-[#5b6b80]",
+  },
+  amber: {
+    chip: "bg-[#fcefc7] text-[#7c5100]",
+    dot: "bg-[#d99a06]",
+    solid: "bg-[#a36b00]",
+  },
+  teal: {
+    chip: "bg-[#d5efef] text-[#0b6262]",
+    dot: "bg-[#0f8a8a]",
+    solid: "bg-[#0d7c7c]",
+  },
+  green: {
+    chip: "bg-[#d9f3e2] text-[#17663a]",
+    dot: "bg-[#22a05a]",
+    solid: "bg-[#1a7f45]",
+  },
+  violet: {
+    chip: "bg-[#ebe4fc] text-[#5634b8]",
+    dot: "bg-[#6d4ad8]",
+    solid: "bg-[#6d4ad8]",
+  },
+  blue: {
+    chip: "bg-primary-soft text-primary-dark",
+    dot: "bg-primary",
+    solid: "bg-primary",
+  },
+  red: {
+    chip: "bg-[#fde3e1] text-[#9f1f14]",
+    dot: "bg-[#d1432f]",
+    solid: "bg-[#b42318]",
+  },
+} as const
+type Tone = keyof typeof TONES
+
+function Chip({ tone, children }: { tone: Tone; children: React.ReactNode }) {
+  return (
+    <span className={cn(pill, TONES[tone].chip)}>
+      <span
+        aria-hidden
+        className={cn("size-1.5 rounded-full", TONES[tone].dot)}
+      />
+      {children}
+    </span>
+  )
 }
+
+const SKILL_TONES: Record<string, Tone> = {
+  learning: "grey",
+  with_support: "amber",
+  without_support: "teal",
+  independent: "green",
+  in_routine: "violet",
+}
+
+/** Per skill status: chip (tinted), dot (legend / bar) and solid (selected switch segment). */
+export const SKILL_STATUS_STYLES: Record<
+  string,
+  { chip: string; dot: string; solid: string }
+> = Object.fromEntries(
+  Object.entries(SKILL_TONES).map(([status, tone]) => [status, TONES[tone]])
+)
 
 export function SkillStatusBadge({ status }: { status: string }) {
   if (status === "cleared")
@@ -29,74 +87,60 @@ export function SkillStatusBadge({ status }: { status: string }) {
       </span>
     )
   return (
-    <span className={cn(pill, SKILL_STATUS_STYLES[status])}>
+    <Chip tone={SKILL_TONES[status] ?? "grey"}>
       {labelFor(SKILL_STATUSES, status)}
-    </span>
+    </Chip>
   )
 }
 
-const NOTE_STYLES: Record<string, string> = {
-  general: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  injury: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
-  coaching: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  achievement:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
+const NOTE_TONES: Record<string, Tone> = {
+  general: "grey",
+  injury: "red",
+  coaching: "blue",
+  achievement: "green",
 }
 
 export function NoteCategoryBadge({ category }: { category: string }) {
   return (
-    <span className={cn(pill, NOTE_STYLES[category])}>
+    <Chip tone={NOTE_TONES[category] ?? "grey"}>
       {labelFor(NOTE_CATEGORIES, category)}
-    </span>
+    </Chip>
   )
 }
 
-const COMP_STYLES: Record<string, string> = {
-  planning: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  entries_open:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  entries_closed:
-    "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300",
-  completed:
-    "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+const COMP_TONES: Record<string, Tone> = {
+  planning: "grey",
+  entries_open: "green",
+  entries_closed: "amber",
+  completed: "violet",
+  cancelled: "red",
 }
 
 export function CompetitionStatusBadge({ status }: { status: string }) {
   return (
-    <span className={cn(pill, COMP_STYLES[status])}>
+    <Chip tone={COMP_TONES[status] ?? "grey"}>
       {labelFor(COMPETITION_STATUSES, status)}
-    </span>
+    </Chip>
   )
 }
 
-const ENTRY_STYLES: Record<string, string> = {
-  invited: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
-  entered: "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300",
-  confirmed:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
-  withdrawn: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
+const ENTRY_TONES: Record<string, Tone> = {
+  invited: "grey",
+  entered: "blue",
+  confirmed: "green",
+  withdrawn: "red",
 }
 
 export function EntryStatusBadge({ status }: { status: string }) {
   return (
-    <span className={cn(pill, ENTRY_STYLES[status])}>
+    <Chip tone={ENTRY_TONES[status] ?? "grey"}>
       {labelFor(ENTRY_STATUSES, status)}
-    </span>
+    </Chip>
   )
 }
 
 export function InjuryBadge() {
-  return (
-    <span
-      className={cn(
-        pill,
-        "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-      )}
-    >
-      Injury
-    </span>
-  )
+  return <Chip tone="red">Injury</Chip>
 }
 
 /** Dot + text colours for each group colour (full class names so Tailwind sees them). */

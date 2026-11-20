@@ -137,10 +137,10 @@ export function NotesTab({ data }: { data: GymnastData }) {
           <div
             key={n.id}
             className={cn(
-              "flex flex-col gap-2 rounded-2xl border p-3",
+              "surface flex flex-col gap-2 p-3",
               n.category === "injury" &&
                 !n.resolved &&
-                "border-red-300 dark:border-red-900"
+                "border-l-4 border-l-[#d1432f]"
             )}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">

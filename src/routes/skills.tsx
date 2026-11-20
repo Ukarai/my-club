@@ -80,7 +80,7 @@ function SkillsPage() {
         return (
           <section key={cat} className="flex flex-col gap-2">
             <h2 className="font-medium">{cat}</h2>
-            <div className="rounded-2xl border">
+            <div className="surface overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>

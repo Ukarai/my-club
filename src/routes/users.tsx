@@ -75,7 +75,7 @@ function UsersPage() {
       </ul>
 
       <FormError error={upd.error} />
-      <div className="overflow-x-auto rounded-2xl border">
+      <div className="surface overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

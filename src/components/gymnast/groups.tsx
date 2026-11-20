@@ -2,7 +2,6 @@ import * as React from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { Plus, X } from "lucide-react"
 import { addGroupMembers, removeGroupMember } from "@/server/functions/groups"
-import { Button } from "@/components/ui/button"
 import { GroupBadge } from "@/components/badges"
 import { FormError, NativeSelect, useAction } from "@/components/form"
 import { useCan } from "@/lib/use-user"
@@ -28,7 +27,7 @@ export function GymnastGroups({ data }: { data: GymnastData }) {
 
   if (!member.length && !canEdit) return null
   return (
-    <div className="flex flex-col gap-1 pt-1">
+    <div className="flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="sr-only">Groups:</span>
         {member.map((gr) => (
@@ -57,7 +56,7 @@ export function GymnastGroups({ data }: { data: GymnastData }) {
           (adding ? (
             <NativeSelect
               autoFocus
-              className="h-6 w-auto rounded-xl px-2 text-xs md:text-xs"
+              className="h-[26px] w-auto rounded-full px-2.5 text-xs md:text-xs"
               aria-label="Add to group"
               defaultValue=""
               disabled={add.pending}
@@ -77,14 +76,13 @@ export function GymnastGroups({ data }: { data: GymnastData }) {
               ))}
             </NativeSelect>
           ) : others.length > 0 ? (
-            <Button
-              variant="ghost"
-              size="xs"
-              className="text-muted-foreground"
+            <button
+              type="button"
+              className="inline-flex h-[26px] items-center gap-1 rounded-full border border-dashed border-[#a9b8cd] px-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
               onClick={() => setAdding(true)}
             >
-              <Plus /> Add to group
-            </Button>
+              <Plus className="size-3" strokeWidth={2.5} /> Add to group
+            </button>
           ) : data.groups.length === 0 ? (
             <Link
               to="/groups"
@@ -98,5 +96,3 @@ export function GymnastGroups({ data }: { data: GymnastData }) {
     </div>
   )
 }
-
-// ───────────────────────────── Skills ─────────────────────────────

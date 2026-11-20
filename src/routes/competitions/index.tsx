@@ -25,7 +25,7 @@ function CompetitionRow({ c }: { c: CompetitionSummary }) {
     <Link
       to="/competitions/$competitionId"
       params={{ competitionId: String(c.id) }}
-      className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 hover:bg-muted"
+      className="surface flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-[#f6f8fb]"
     >
       <div className="min-w-0">
         <div className="font-medium">{c.name}</div>

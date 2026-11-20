@@ -24,7 +24,7 @@ export function CompetitionsTab({ data }: { data: GymnastData }) {
           key={e.id}
           to="/competitions/$competitionId"
           params={{ competitionId: String(e.competition_id) }}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border p-3 hover:bg-muted"
+          className="surface flex flex-wrap items-center justify-between gap-2 p-3 hover:bg-[#f6f8fb]"
         >
           <div>
             <div className="font-medium">{e.competition_name}</div>

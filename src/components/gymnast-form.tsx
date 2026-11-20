@@ -59,10 +59,20 @@ export function GymnastDialog({
           }}
         >
           <Field label="First name" htmlFor="first_name">
-            <Input id="first_name" name="first_name" required defaultValue={gymnast?.first_name} />
+            <Input
+              id="first_name"
+              name="first_name"
+              required
+              defaultValue={gymnast?.first_name}
+            />
           </Field>
           <Field label="Last name" htmlFor="last_name">
-            <Input id="last_name" name="last_name" required defaultValue={gymnast?.last_name} />
+            <Input
+              id="last_name"
+              name="last_name"
+              required
+              defaultValue={gymnast?.last_name}
+            />
           </Field>
           <Field label="Date of birth" htmlFor="date_of_birth">
             <Input
@@ -80,7 +90,11 @@ export function GymnastDialog({
               defaultValue={gymnast?.squad ?? ""}
             />
           </Field>
-          <Field label="Level / grade" htmlFor="level" className="sm:col-span-2">
+          <Field
+            label="Level / grade"
+            htmlFor="level"
+            className="sm:col-span-2"
+          >
             <Input
               id="level"
               name="level"
@@ -88,14 +102,22 @@ export function GymnastDialog({
               defaultValue={gymnast?.level ?? ""}
             />
           </Field>
-          <Field label="Parent / guardian contact" htmlFor="guardian_contact" className="sm:col-span-2">
+          <Field
+            label="Parent / guardian contact"
+            htmlFor="guardian_contact"
+            className="sm:col-span-2"
+          >
             <Input
               id="guardian_contact"
               name="guardian_contact"
               defaultValue={gymnast?.guardian_contact ?? ""}
             />
           </Field>
-          <Field label="Medical information" htmlFor="medical_info" className="sm:col-span-2">
+          <Field
+            label="Medical information"
+            htmlFor="medical_info"
+            className="sm:col-span-2"
+          >
             <Textarea
               id="medical_info"
               name="medical_info"
@@ -107,7 +129,11 @@ export function GymnastDialog({
             <FormError error={save.error} />
           </div>
           <DialogFooter className="sm:col-span-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={save.pending}>
@@ -122,5 +148,6 @@ export function GymnastDialog({
 
 export function useDialog() {
   const [open, setOpen] = React.useState(false)
-  return { open, onOpenChange: setOpen, show: () => setOpen(true) }
+  const show = React.useCallback(() => setOpen(true), [])
+  return { open, onOpenChange: setOpen, show }
 }
