@@ -68,10 +68,17 @@ export type Group = {
   name: string
   description: string | null
   color: GroupColor
+  primary_coach_id: number | null
   created_at: string
 }
 
-export type GroupSummary = Group & { member_count: number }
+/** A group with its primary coach's name joined in. */
+export type GroupWithCoach = Group & { primary_coach_name: string | null }
+
+export type GroupSummary = GroupWithCoach & { member_count: number }
+
+/** Someone who can be a group's primary coach: an active coach or admin. */
+export type CoachOption = { id: number; name: string }
 
 export const TARGET_STATUSES = [
   { value: "active", label: "Active" },

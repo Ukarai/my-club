@@ -240,6 +240,12 @@ export const updateUser = createServerFn({ method: "POST" })
         run("UPDATE users SET active = ? WHERE id = ?", d.active ? 1 : 0, d.id)
         if (!d.active) endAllSessionsFor(d.id)
       }
+      // Only active coaches and admins can be a group's primary coach.
+      if (d.role === "viewer" || d.active === false)
+        run(
+          "UPDATE club_groups SET primary_coach_id = NULL WHERE primary_coach_id = ?",
+          d.id
+        )
       if (d.password) {
         checkPassword(d.password)
         run(

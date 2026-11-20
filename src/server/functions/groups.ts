@@ -2,18 +2,34 @@
 import { createServerFn } from "@tanstack/react-start"
 import { requireRole } from "../auth"
 import { all, get, run, tx } from "../db"
-import { GROUP_COLORS, today } from "@/lib/domain"
-import type { Group, GroupSummary, Gymnast } from "@/lib/domain"
+import { GROUP_COLORS, hasRole, today } from "@/lib/domain"
+import type {
+  CoachOption,
+  GroupSummary,
+  GroupWithCoach,
+  Gymnast,
+} from "@/lib/domain"
 import { input, blank } from "./util"
 
 export const listGroups = createServerFn({ method: "GET" }).handler(
   async () => {
     requireRole("viewer")
     return all<GroupSummary>(
-      `SELECT gr.*,
+      `SELECT gr.*, u.name AS primary_coach_name,
         (SELECT count(*) FROM group_members m JOIN gymnasts g ON g.id = m.gymnast_id
            WHERE m.group_id = gr.id AND g.active = 1) AS member_count
-       FROM club_groups gr ORDER BY gr.name`
+       FROM club_groups gr LEFT JOIN users u ON u.id = gr.primary_coach_id
+       ORDER BY gr.name`
+    )
+  }
+)
+
+/** People an admin can make a group's primary coach. */
+export const listCoaches = createServerFn({ method: "GET" }).handler(
+  async () => {
+    requireRole("admin")
+    return all<CoachOption>(
+      "SELECT id, name FROM users WHERE active = 1 AND role IN ('coach', 'admin') ORDER BY name"
     )
   }
 )
@@ -36,7 +52,12 @@ export const getGroup = createServerFn({ method: "GET" })
   .validator(input<number>())
   .handler(async ({ data: id }) => {
     requireRole("viewer")
-    const group = get<Group>("SELECT * FROM club_groups WHERE id = ?", id)
+    const group = get<GroupWithCoach>(
+      `SELECT gr.*, u.name AS primary_coach_name
+       FROM club_groups gr LEFT JOIN users u ON u.id = gr.primary_coach_id
+       WHERE gr.id = ?`,
+      id
+    )
     if (!group) throw new Error("Group not found")
     return {
       group,
@@ -60,14 +81,29 @@ export type GroupInput = {
   name: string
   description?: string | null
   color?: string | null
+  /** Admins only. Leave undefined to keep the current coach. */
+  primaryCoachId?: number | null
 }
 
 export const saveGroup = createServerFn({ method: "POST" })
   .validator(input<GroupInput>())
   .handler(async ({ data: d }) => {
-    requireRole("coach")
+    const user = requireRole("coach")
     const name = d.name.trim()
     if (!name) throw new Error("Group needs a name")
+    const coachId = d.primaryCoachId
+    if (coachId !== undefined) {
+      if (!hasRole(user, "admin"))
+        throw new Error("Only an admin can choose a group's primary coach")
+      if (
+        coachId !== null &&
+        !get(
+          "SELECT 1 FROM users WHERE id = ? AND active = 1 AND role IN ('coach', 'admin')",
+          coachId
+        )
+      )
+        throw new Error("Choose an active coach")
+    }
     const color = GROUP_COLORS.find((c) => c === d.color) ?? "sky"
     const clash = get<{ id: number }>(
       "SELECT id FROM club_groups WHERE name = ? AND id != ?",
@@ -76,20 +112,30 @@ export const saveGroup = createServerFn({ method: "POST" })
     )
     if (clash) throw new Error(`There's already a group called "${name}"`)
     if (d.id) {
-      run(
-        "UPDATE club_groups SET name = ?, description = ?, color = ? WHERE id = ?",
-        name,
-        blank(d.description),
-        color,
-        d.id
-      )
-      return d.id
+      const id = d.id
+      tx(() => {
+        run(
+          "UPDATE club_groups SET name = ?, description = ?, color = ? WHERE id = ?",
+          name,
+          blank(d.description),
+          color,
+          id
+        )
+        if (coachId !== undefined)
+          run(
+            "UPDATE club_groups SET primary_coach_id = ? WHERE id = ?",
+            coachId,
+            id
+          )
+      })
+      return id
     }
     return run(
-      "INSERT INTO club_groups (name, description, color) VALUES (?, ?, ?)",
+      "INSERT INTO club_groups (name, description, color, primary_coach_id) VALUES (?, ?, ?, ?)",
       name,
       blank(d.description),
-      color
+      color,
+      coachId ?? null
     )
   })
 

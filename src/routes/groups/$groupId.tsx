@@ -11,6 +11,7 @@ import {
   addGroupMembers,
   deleteGroup,
   getGroup,
+  listCoaches,
   removeGroupMember,
 } from "@/server/functions/groups"
 import { Button } from "@/components/ui/button"
@@ -28,11 +29,17 @@ import { GroupDot, InjuryBadge } from "@/components/badges"
 import { EmptyState, FormError, useAction } from "@/components/form"
 import { GroupDialog } from "@/components/group-form"
 import { useDialog } from "@/components/gymnast-form"
-import { ageFrom } from "@/lib/domain"
+import { ageFrom, hasRole } from "@/lib/domain"
 import { useCan } from "@/lib/use-user"
 
 export const Route = createFileRoute("/groups/$groupId")({
-  loader: ({ params }) => getGroup({ data: Number(params.groupId) }),
+  loader: async ({ params, context }) => {
+    const [data, coaches] = await Promise.all([
+      getGroup({ data: Number(params.groupId) }),
+      hasRole(context.user, "admin") ? listCoaches() : undefined,
+    ])
+    return { ...data, coaches }
+  },
   component: GroupPage,
 })
 
@@ -44,6 +51,7 @@ function GroupPage() {
   const navigate = useNavigate()
   const edit = useDialog()
   const canEdit = useCan("coach")
+  const isAdmin = useCan("admin")
   const g = data.group
   const active = data.members.filter((m) => m.active)
   const archived = data.members.length - active.length
@@ -81,6 +89,16 @@ function GroupPage() {
           <p className="text-sm text-muted-foreground">
             {active.length} gymnast{active.length === 1 ? "" : "s"}
             {archived > 0 && ` · ${archived} archived`}
+            {g.primary_coach_name ? (
+              <>
+                {" · Coach: "}
+                <span className="font-medium text-foreground">
+                  {g.primary_coach_name}
+                </span>
+              </>
+            ) : (
+              isAdmin && " · No coach yet"
+            )}
           </p>
           {g.description && (
             <p className="max-w-prose text-sm whitespace-pre-wrap">
@@ -197,6 +215,7 @@ function GroupPage() {
         open={edit.open}
         onOpenChange={edit.onOpenChange}
         group={g}
+        coaches={data.coaches}
       />
     </div>
   )

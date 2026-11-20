@@ -2,11 +2,15 @@ import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { Plus, Target as TargetIcon } from "lucide-react"
 import { cn } from "cn"
 import type * as React from "react"
-import { getDashboard } from "@/server/functions/dashboard"
+import { getDashboard, type DashboardView } from "@/server/functions/dashboard"
 import { loadDemoData } from "@/server/functions/demo"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CompetitionStatusBadge, SkillStatusBadge } from "@/components/badges"
+import {
+  CompetitionStatusBadge,
+  GroupDot,
+  SkillStatusBadge,
+} from "@/components/badges"
 import { Avatar, ClubLogo } from "@/components/avatar"
 import { EmptyState, FormError, useAction } from "@/components/form"
 import { CLUB } from "@/lib/club"
@@ -14,7 +18,10 @@ import { daysUntil } from "@/lib/domain"
 import { useCan, useUser } from "@/lib/use-user"
 
 export const Route = createFileRoute("/")({
-  loader: () => getDashboard(),
+  validateSearch: (s: Record<string, unknown>): { view?: DashboardView } =>
+    s.view === "mine" || s.view === "all" ? { view: s.view } : {},
+  loaderDeps: ({ search }) => ({ view: search.view }),
+  loader: ({ deps }) => getDashboard({ data: { view: deps.view } }),
   component: Dashboard,
 })
 
@@ -136,6 +143,16 @@ function Competitions({ data }: { data: DashboardData }) {
                   new Date().getFullYear() &&
                   `${parseIso(c.start_date).getFullYear()} · `}
                 {capitalize(inDays(days))} · {c.entry_count} entered
+                {c.my_entry_count !== null && c.entry_count > 0 && (
+                  <span
+                    className={cn(
+                      c.my_entry_count > 0 && "font-semibold text-primary-dark"
+                    )}
+                  >
+                    {" "}
+                    · {c.my_entry_count} from your groups
+                  </span>
+                )}
               </span>
               {deadline !== null && deadline >= 0 && (
                 <span
@@ -172,7 +189,9 @@ function Injuries({ data }: { data: DashboardData }) {
       </CardHeader>
       <div className="flex flex-col gap-3 px-4 md:px-5">
         {data.injuries.length === 0 && (
-          <p className="text-sm text-muted-foreground">No open injuries.</p>
+          <p className="text-sm text-muted-foreground">
+            No open injuries{data.view === "mine" && " in your groups"}.
+          </p>
         )}
         {data.injuries.map((n) => (
           <Link
@@ -361,6 +380,60 @@ function Welcome() {
   )
 }
 
+/** "My groups" / "Whole club" switch, and links to the user's groups. */
+function ViewBar({ data }: { data: DashboardData }) {
+  const views: { value: DashboardView; label: string }[] = [
+    { value: "mine", label: "My groups" },
+    { value: "all", label: "Whole club" },
+  ]
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+      <nav
+        aria-label="Dashboard view"
+        className="flex shrink-0 gap-0.5 rounded-[10px] border border-[#d6dfeb] bg-muted p-[3px]"
+      >
+        {views.map((v) => (
+          <Link
+            key={v.value}
+            to="/"
+            search={{ view: v.value }}
+            replace
+            aria-current={data.view === v.value ? "page" : undefined}
+            className={cn(
+              "rounded-[7px] px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+              data.view === v.value
+                ? "bg-white text-foreground shadow-[0_1px_3px_rgb(11_31_61/0.18)]"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {v.label}
+          </Link>
+        ))}
+      </nav>
+      {data.view === "mine" && (
+        <ul aria-label="Your groups" className="flex flex-wrap gap-2">
+          {data.myGroups.map((g) => (
+            <li key={g.id}>
+              <Link
+                to="/groups/$groupId"
+                params={{ groupId: String(g.id) }}
+                className="inline-flex h-8 items-center gap-2 rounded-full border bg-card px-3 text-[13px] font-semibold transition-colors hover:border-primary hover:text-primary"
+              >
+                <GroupDot color={g.color} />
+                {g.name}
+                <span className="font-medium text-muted-foreground tabular-nums">
+                  {g.member_count}
+                  <span className="sr-only"> gymnasts</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 /** Lightning bolt watermark behind the phone greeting. */
 function Bolt(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -416,6 +489,8 @@ function Dashboard() {
           </Button>
         )}
       </div>
+
+      {data.myGroups.length > 0 && <ViewBar data={data} />}
 
       {/* Sized by the content area, not the window, since the sidebar takes
           part of it. Wide: competitions and progress on the left, injuries

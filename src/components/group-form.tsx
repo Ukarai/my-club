@@ -10,20 +10,29 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Field, FormError, formValues, useAction } from "@/components/form"
+import {
+  Field,
+  FormError,
+  NativeSelect,
+  formValues,
+  useAction,
+} from "@/components/form"
 import { GROUP_COLOR_STYLES } from "@/components/badges"
 import { saveGroup } from "@/server/functions/groups"
-import { GROUP_COLORS, type Group } from "@/lib/domain"
+import { GROUP_COLORS, type CoachOption, type Group } from "@/lib/domain"
 
 export function GroupDialog({
   open,
   onOpenChange,
   group,
+  coaches,
   onSaved,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   group?: Group
+  /** Pass for admins to show the primary coach picker. */
+  coaches?: CoachOption[]
   onSaved?: (id: number) => void
 }) {
   const router = useRouter()
@@ -35,6 +44,11 @@ export function GroupDialog({
         name: v.name,
         description: v.description,
         color: v.color,
+        primaryCoachId: coaches
+          ? v.primary_coach_id
+            ? Number(v.primary_coach_id)
+            : null
+          : undefined,
       },
     })
     await router.invalidate()
@@ -72,6 +86,29 @@ export function GroupDialog({
               defaultValue={group?.description ?? ""}
             />
           </Field>
+          {coaches && (
+            <Field label="Primary coach" htmlFor="group-coach">
+              <NativeSelect
+                id="group-coach"
+                name="primary_coach_id"
+                defaultValue={group?.primary_coach_id ?? ""}
+                aria-describedby="group-coach-hint"
+              >
+                <option value="">No primary coach</option>
+                {coaches.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </NativeSelect>
+              <p
+                id="group-coach-hint"
+                className="text-xs text-muted-foreground"
+              >
+                Their dashboard opens on this group&apos;s gymnasts.
+              </p>
+            </Field>
+          )}
           <fieldset className="flex flex-col gap-1.5">
             <legend className="mb-1.5 text-sm font-medium">Colour</legend>
             <div className="flex flex-wrap gap-2">

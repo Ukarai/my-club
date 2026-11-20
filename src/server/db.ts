@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS club_groups (
   name TEXT NOT NULL UNIQUE COLLATE NOCASE,
   description TEXT,
   color TEXT NOT NULL DEFAULT 'sky',
+  -- The coach whose dashboard shows this group ("My groups"). Admins set it.
+  primary_coach_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL DEFAULT (date('now'))
 );
 
@@ -246,6 +248,16 @@ function migrate(conn: DatabaseSync) {
     addColumn(conn, "gymnast_skills", "updated_by", "TEXT")
     addColumn(conn, "skill_history", "recorded_by", "TEXT")
     conn.exec("PRAGMA user_version = 3")
+  }
+  if (version < 4) {
+    // Each group's primary coach. Existing groups start with none.
+    addColumn(
+      conn,
+      "club_groups",
+      "primary_coach_id",
+      "INTEGER REFERENCES users(id) ON DELETE SET NULL"
+    )
+    conn.exec("PRAGMA user_version = 4")
   }
 }
 

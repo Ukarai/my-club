@@ -1,23 +1,32 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus } from "lucide-react"
-import { listGroups } from "@/server/functions/groups"
+import { listCoaches, listGroups } from "@/server/functions/groups"
 import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/form"
 import { GroupDot } from "@/components/badges"
 import { GroupDialog } from "@/components/group-form"
 import { useDialog } from "@/components/gymnast-form"
-import { useCan } from "@/lib/use-user"
+import { hasRole } from "@/lib/domain"
+import { useCan, useUser } from "@/lib/use-user"
 
 export const Route = createFileRoute("/groups/")({
-  loader: () => listGroups(),
+  loader: async ({ context }) => {
+    const [groups, coaches] = await Promise.all([
+      listGroups(),
+      hasRole(context.user, "admin") ? listCoaches() : undefined,
+    ])
+    return { groups, coaches }
+  },
   component: Groups,
 })
 
 function Groups() {
-  const groups = Route.useLoaderData()
+  const { groups, coaches } = Route.useLoaderData()
   const navigate = useNavigate()
   const dialog = useDialog()
+  const user = useUser()
   const canEdit = useCan("coach")
+  const isAdmin = useCan("admin")
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,9 +69,25 @@ function Groups() {
                   {g.description}
                 </p>
               )}
-              <p className="mt-auto pt-1 text-sm tabular-nums">
-                {g.member_count} gymnast{g.member_count === 1 ? "" : "s"}
-              </p>
+              <div className="mt-auto flex flex-wrap justify-between gap-x-3 gap-y-0.5 pt-1 text-sm">
+                <span className="tabular-nums">
+                  {g.member_count} gymnast{g.member_count === 1 ? "" : "s"}
+                </span>
+                {g.primary_coach_name ? (
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    Coach:{" "}
+                    <span className="font-medium text-foreground">
+                      {g.primary_coach_id === user?.id
+                        ? "You"
+                        : g.primary_coach_name}
+                    </span>
+                  </span>
+                ) : (
+                  isAdmin && (
+                    <span className="text-muted-foreground">No coach yet</span>
+                  )
+                )}
+              </div>
             </Link>
           ))}
         </div>
@@ -71,6 +96,7 @@ function Groups() {
       <GroupDialog
         open={dialog.open}
         onOpenChange={dialog.onOpenChange}
+        coaches={coaches}
         onSaved={(id) =>
           navigate({
             to: "/groups/$groupId",
