@@ -1,6 +1,7 @@
-// Dashboard summary: upcoming competitions, open injuries, recent progress.
-// Coaches who are a group's primary coach see their groups' gymnasts by
-// default ("My groups"), and can switch to the whole club.
+// Dashboard summary: upcoming competitions, open injuries, groups and the
+// newest gymnasts. Coaches who are a group's primary coach see their groups
+// (and those groups' gymnasts) by default ("My groups"), and can switch to the
+// whole club.
 import { createServerFn } from "@tanstack/react-start"
 import { z } from "zod"
 import { requireRole } from "../auth"
@@ -9,20 +10,15 @@ import { check } from "../check"
 import { today } from "@/lib/domain"
 import type {
   CompetitionSummary,
-  GroupColor,
+  GroupSummary,
+  Gymnast,
   Note,
-  SkillHistory,
-  Target,
 } from "@/lib/domain"
 
 export type DashboardView = "mine" | "all"
 
-export type MyGroup = {
-  id: number
-  name: string
-  color: GroupColor
-  member_count: number
-}
+/** How many of the newest gymnasts the dashboard lists. */
+const NEWEST_LIMIT = 5
 
 export const getDashboard = createServerFn({ method: "GET" })
   .validator(check(z.object({ view: z.enum(["mine", "all"]).optional() })))
@@ -30,13 +26,14 @@ export const getDashboard = createServerFn({ method: "GET" })
     const user = requireRole("viewer")
     const t = today()
 
-    const myGroups = all<MyGroup>(
-      `SELECT gr.id, gr.name, gr.color,
+    const allGroups = all<GroupSummary>(
+      `SELECT gr.*, u.name AS primary_coach_name,
         (SELECT count(*) FROM group_members m JOIN gymnasts g ON g.id = m.gymnast_id
            WHERE m.group_id = gr.id AND g.active = 1) AS member_count
-       FROM club_groups gr WHERE gr.primary_coach_id = ? ORDER BY gr.name`,
-      user.id
+       FROM club_groups gr LEFT JOIN users u ON u.id = gr.primary_coach_id
+       ORDER BY gr.name`
     )
+    const myGroups = allGroups.filter((g) => g.primary_coach_id === user.id)
     // Default to "My groups" for anyone who has some.
     const view: DashboardView =
       myGroups.length && d.view !== "all" ? "mine" : "all"
@@ -51,21 +48,12 @@ export const getDashboard = createServerFn({ method: "GET" })
 
     return {
       view,
-      myGroups,
-      counts: get<{
-        gymnasts: number
-        skills: number
-        targets: number
-        injuries: number
-      }>(
-        `SELECT
-        (SELECT count(*) FROM gymnasts WHERE active = 1) AS gymnasts,
-        (SELECT count(*) FROM skills) AS skills,
-        (SELECT count(*) FROM targets t JOIN gymnasts g ON g.id = t.gymnast_id
-           WHERE t.status = 'active' AND g.active = 1) AS targets,
-        (SELECT count(*) FROM notes n JOIN gymnasts g ON g.id = n.gymnast_id
-           WHERE n.category = 'injury' AND n.resolved = 0 AND g.active = 1) AS injuries`
-      )!,
+      /** Whether the user can switch to "My groups". */
+      hasGroups: myGroups.length > 0,
+      /** Active gymnasts in the whole club, for the first-run welcome. */
+      gymnastCount: get<{ n: number }>(
+        "SELECT count(*) AS n FROM gymnasts WHERE active = 1"
+      )!.n,
       // Competitions are club-wide; "My groups" adds how many of the
       // user's gymnasts are entered.
       upcoming: all<CompetitionSummary & { my_entry_count: number | null }>(
@@ -84,14 +72,6 @@ export const getDashboard = createServerFn({ method: "GET" })
         ...scopeArgs,
         t
       ),
-      targetsDue: all<Target & { gymnast_name: string }>(
-        `SELECT t.*, s.name AS skill_name, g.first_name || ' ' || g.last_name AS gymnast_name
-       FROM targets t JOIN gymnasts g ON g.id = t.gymnast_id
-       LEFT JOIN skills s ON s.id = t.skill_id
-       WHERE t.status = 'active' AND g.active = 1${scope}
-       ORDER BY t.target_date IS NULL, t.target_date LIMIT 8`,
-        ...scopeArgs
-      ),
       injuries: all<Note & { gymnast_name: string }>(
         `SELECT n.*, g.first_name || ' ' || g.last_name AS gymnast_name
        FROM notes n JOIN gymnasts g ON g.id = n.gymnast_id
@@ -99,15 +79,18 @@ export const getDashboard = createServerFn({ method: "GET" })
        ORDER BY n.noted_on DESC`,
         ...scopeArgs
       ),
-      recentProgress: all<
-        SkillHistory & { gymnast_id: number; gymnast_name: string }
+      groups: mine ? myGroups : allGroups,
+      newestGymnasts: all<
+        Pick<
+          Gymnast,
+          "id" | "first_name" | "last_name" | "squad" | "level" | "created_at"
+        >
       >(
-        `SELECT h.*, s.name AS skill_name, g.first_name || ' ' || g.last_name AS gymnast_name
-       FROM skill_history h JOIN skills s ON s.id = h.skill_id
-       JOIN gymnasts g ON g.id = h.gymnast_id
-       WHERE h.status != 'cleared'${scope}
-       ORDER BY h.recorded_on DESC, h.id DESC LIMIT 10`,
-        ...scopeArgs
+        `SELECT g.id, g.first_name, g.last_name, g.squad, g.level, g.created_at
+       FROM gymnasts g WHERE g.active = 1${scope}
+       ORDER BY g.created_at DESC, g.id DESC LIMIT ?`,
+        ...scopeArgs,
+        NEWEST_LIMIT
       ),
     }
   })

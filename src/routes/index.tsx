@@ -1,18 +1,14 @@
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
-import { Plus, Target as TargetIcon } from "lucide-react"
+import { Users } from "lucide-react"
 import { cn } from "cn"
 import type * as React from "react"
 import { getDashboard, type DashboardView } from "@/server/functions/dashboard"
 import { loadDemoData } from "@/server/functions/demo"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  CompetitionStatusBadge,
-  GroupDot,
-  SkillStatusBadge,
-} from "@/components/badges"
+import { CompetitionStatusBadge, GROUP_COLOR_STYLES } from "@/components/badges"
 import { Avatar, ClubLogo } from "@/components/avatar"
-import { EmptyState, FormError, useAction } from "@/components/form"
+import { FormError, useAction } from "@/components/form"
 import { CLUB } from "@/lib/club"
 import { daysUntil } from "@/lib/domain"
 import { useCan, useUser } from "@/lib/use-user"
@@ -85,6 +81,35 @@ function DateBlock({ iso, className }: { iso: string; className: string }) {
 const row =
   "flex items-center gap-3.5 border-b border-divider px-4 py-3.5 transition-colors last:border-b-0 hover:bg-[#f7f9fc] md:px-5"
 
+/** A card header with its title and a "View all" link. */
+function CardHeading({
+  title,
+  to,
+}: {
+  title: string
+  to: "/competitions" | "/groups" | "/gymnasts"
+}) {
+  return (
+    <CardHeader className="grid-cols-[1fr_auto]">
+      <CardTitle>{title}</CardTitle>
+      <Link
+        to={to}
+        className="text-[13px] font-semibold text-primary hover:text-primary-dark"
+      >
+        View all
+      </Link>
+    </CardHeader>
+  )
+}
+
+/** "today", "yesterday" or a short date. */
+function addedOn(iso: string) {
+  const ago = -daysUntil(iso)
+  if (ago <= 0) return "today"
+  if (ago === 1) return "yesterday"
+  return shortDate(iso)
+}
+
 function CountPill({ n, className }: { n: number; className?: string }) {
   return (
     <span
@@ -101,15 +126,7 @@ function CountPill({ n, className }: { n: number; className?: string }) {
 function Competitions({ data }: { data: DashboardData }) {
   return (
     <Card className="gap-0 pb-0">
-      <CardHeader className="grid-cols-[1fr_auto]">
-        <CardTitle>Upcoming competitions</CardTitle>
-        <Link
-          to="/competitions"
-          className="text-[13px] font-semibold text-primary hover:text-primary-dark"
-        >
-          View all
-        </Link>
-      </CardHeader>
+      <CardHeading title="Upcoming competitions" to="/competitions" />
       {data.upcoming.length === 0 && (
         <p className="p-5 text-sm text-muted-foreground">
           Nothing scheduled.{" "}
@@ -217,121 +234,113 @@ function Injuries({ data }: { data: DashboardData }) {
   )
 }
 
-function Targets({ data }: { data: DashboardData }) {
+/** How many groups the card lists before pointing to the full list. */
+const GROUPS_SHOWN = 8
+
+function Groups({ data }: { data: DashboardData }) {
+  const user = useUser()
+  const canEdit = useCan("coach")
+  const isAdmin = useCan("admin")
+  const mine = data.view === "mine"
+  const shown = data.groups.slice(0, GROUPS_SHOWN)
+  const more = data.groups.length - shown.length
   return (
     <Card className="gap-0 pb-0">
-      <CardHeader className="grid-cols-[1fr_auto]">
-        <CardTitle>Targets due</CardTitle>
-      </CardHeader>
-      {data.targetsDue.length === 0 && (
-        <div className="p-5">
-          <EmptyState title="No active targets" />
-        </div>
+      <CardHeading title={mine ? "Your groups" : "Groups"} to="/groups" />
+      {data.groups.length === 0 && (
+        <p className="p-5 text-sm text-muted-foreground">
+          No groups yet.
+          {canEdit && (
+            <>
+              {" "}
+              <Link to="/groups" className="text-primary underline">
+                Create a group
+              </Link>
+            </>
+          )}
+        </p>
       )}
-      {data.targetsDue.map((t) => {
-        const days = t.target_date ? daysUntil(t.target_date) : null
-        return (
-          <Link
-            key={t.id}
-            to="/gymnasts/$gymnastId"
-            params={{ gymnastId: String(t.gymnast_id) }}
-            search={{ tab: "targets" }}
-            className={row}
-          >
-            {t.target_date ? (
-              <DateBlock
-                iso={t.target_date}
-                className={
-                  days !== null && days < 0
-                    ? "bg-[#fde3e1] text-[#9f1f14]"
-                    : "bg-[#fcefc7] text-[#7c5100]"
-                }
-              />
-            ) : (
-              <span className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-[10px] bg-secondary text-[#364660]">
-                <TargetIcon className="size-5" />
-              </span>
+      {shown.map((g) => (
+        <Link
+          key={g.id}
+          to="/groups/$groupId"
+          params={{ groupId: String(g.id) }}
+          className={row}
+        >
+          <span
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-[10px]",
+              GROUP_COLOR_STYLES[g.color]?.pill ?? GROUP_COLOR_STYLES.sky?.pill
             )}
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-sm font-semibold">{t.title}</span>
-              <span className="text-[13px] text-muted-foreground">
-                {t.gymnast_name}
-                {days !== null &&
-                  (days < 0 ? (
-                    <span className="font-semibold text-destructive">
-                      {" "}
-                      · {-days}d overdue
-                    </span>
-                  ) : (
-                    ` · ${inDays(days)}`
-                  ))}
+          >
+            <Users className="size-4" strokeWidth={2.25} />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="truncate text-sm font-semibold">{g.name}</span>
+            <span className="truncate text-[13px] text-muted-foreground">
+              <span className="tabular-nums">
+                {g.member_count} gymnast{g.member_count === 1 ? "" : "s"}
               </span>
+              {/* In "My groups" every coach is the user, so skip it. */}
+              {!mine &&
+                (g.primary_coach_name
+                  ? ` · ${g.primary_coach_id === user?.id ? "You" : g.primary_coach_name}`
+                  : isAdmin && " · No coach yet")}
             </span>
-          </Link>
-        )
-      })}
+          </span>
+        </Link>
+      ))}
+      {more > 0 && (
+        <Link
+          to="/groups"
+          className={cn(
+            row,
+            "justify-center py-3 text-[13px] font-semibold text-primary"
+          )}
+        >
+          {more} more {more === 1 ? "group" : "groups"}
+        </Link>
+      )}
     </Card>
   )
 }
 
-function RecentProgress({ data }: { data: DashboardData }) {
-  // Group consecutive updates by gymnast, keeping newest-first order.
-  const groups: {
-    id: number
-    name: string
-    items: DashboardData["recentProgress"]
-  }[] = []
-  for (const h of data.recentProgress) {
-    const g = groups.find((x) => x.id === h.gymnast_id)
-    if (g) g.items.push(h)
-    else groups.push({ id: h.gymnast_id, name: h.gymnast_name, items: [h] })
-  }
-
+function NewestGymnasts({ data }: { data: DashboardData }) {
   return (
-    <Card className="gap-0">
-      <CardHeader className="mb-1.5">
-        <CardTitle>Recent progress</CardTitle>
-      </CardHeader>
-      {groups.length === 0 && (
-        <p className="px-5 text-sm text-muted-foreground">
-          Skill updates will show here.
+    <Card className="gap-0 pb-0">
+      <CardHeading title="Newest gymnasts" to="/gymnasts" />
+      {data.newestGymnasts.length === 0 && (
+        <p className="p-5 text-sm text-muted-foreground">
+          No gymnasts{data.view === "mine" && " in your groups"} yet.
         </p>
       )}
-      {groups.map((g) => (
-        <div
-          key={g.id}
-          className="border-b border-divider pb-1.5 last:border-b-0 last:pb-0"
-        >
+      {data.newestGymnasts.map((g) => {
+        const name = `${g.first_name} ${g.last_name}`
+        const details = [g.squad, g.level].filter(Boolean).join(" · ")
+        return (
           <Link
+            key={g.id}
             to="/gymnasts/$gymnastId"
             params={{ gymnastId: String(g.id) }}
-            className="flex items-center gap-2.5 px-4 pt-2.5 pb-1 hover:text-primary md:px-5"
+            className={row}
           >
-            <Avatar name={g.name} seed={g.id} />
-            <span className="text-sm font-bold">{g.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {g.items.length} {g.items.length === 1 ? "update" : "updates"}
-            </span>
-          </Link>
-          {g.items.map((h) => (
-            <div
-              key={h.id}
-              className="flex items-center justify-between gap-3 py-2 pr-4 pl-[54px] md:pr-5 md:pl-[58px]"
-            >
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-sm text-[#17253b]">
-                  {h.skill_name}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {shortDate(h.recorded_on)}
-                  {h.recorded_by && ` · ${h.recorded_by}`}
+            <Avatar name={name} seed={g.id} className="size-9 text-xs" />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="flex items-baseline justify-between gap-3">
+                <span className="truncate text-sm font-semibold">{name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  Added {addedOn(g.created_at)}
                 </span>
               </span>
-              <SkillStatusBadge status={h.status} />
-            </div>
-          ))}
-        </div>
-      ))}
+              {details && (
+                <span className="truncate text-[13px] text-muted-foreground">
+                  {details}
+                </span>
+              )}
+            </span>
+          </Link>
+        )
+      })}
     </Card>
   )
 }
@@ -380,57 +389,35 @@ function Welcome() {
   )
 }
 
-/** "My groups" / "Whole club" switch, and links to the user's groups. */
+/** "My groups" / "Whole club" switch. */
 function ViewBar({ data }: { data: DashboardData }) {
   const views: { value: DashboardView; label: string }[] = [
     { value: "mine", label: "My groups" },
     { value: "all", label: "Whole club" },
   ]
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-      <nav
-        aria-label="Dashboard view"
-        className="flex shrink-0 gap-0.5 rounded-[10px] border border-[#d6dfeb] bg-muted p-[3px]"
-      >
-        {views.map((v) => (
-          <Link
-            key={v.value}
-            to="/"
-            search={{ view: v.value }}
-            replace
-            aria-current={data.view === v.value ? "page" : undefined}
-            className={cn(
-              "rounded-[7px] px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-              data.view === v.value
-                ? "bg-white text-foreground shadow-[0_1px_3px_rgb(11_31_61/0.18)]"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {v.label}
-          </Link>
-        ))}
-      </nav>
-      {data.view === "mine" && (
-        <ul aria-label="Your groups" className="flex flex-wrap gap-2">
-          {data.myGroups.map((g) => (
-            <li key={g.id}>
-              <Link
-                to="/groups/$groupId"
-                params={{ groupId: String(g.id) }}
-                className="inline-flex h-8 items-center gap-2 rounded-full border bg-card px-3 text-[13px] font-semibold transition-colors hover:border-primary hover:text-primary"
-              >
-                <GroupDot color={g.color} />
-                {g.name}
-                <span className="font-medium text-muted-foreground tabular-nums">
-                  {g.member_count}
-                  <span className="sr-only"> gymnasts</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <nav
+      aria-label="Dashboard view"
+      className="flex w-fit gap-0.5 rounded-[10px] border border-[#d6dfeb] bg-muted p-[3px]"
+    >
+      {views.map((v) => (
+        <Link
+          key={v.value}
+          to="/"
+          search={{ view: v.value }}
+          replace
+          aria-current={data.view === v.value ? "page" : undefined}
+          className={cn(
+            "rounded-[7px] px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+            data.view === v.value
+              ? "bg-white text-foreground shadow-[0_1px_3px_rgb(11_31_61/0.18)]"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {v.label}
+        </Link>
+      ))}
+    </nav>
   )
 }
 
@@ -446,9 +433,8 @@ function Bolt(props: React.SVGProps<SVGSVGElement>) {
 function Dashboard() {
   const data = Route.useLoaderData()
   const user = useUser()
-  const canEdit = useCan("coach")
 
-  if (data.counts.gymnasts === 0 && data.upcoming.length === 0) {
+  if (data.gymnastCount === 0 && data.upcoming.length === 0) {
     return <Welcome />
   }
 
@@ -478,47 +464,27 @@ function Dashboard() {
             {firstName && `, ${firstName}`}
           </h1>
         </div>
-        {canEdit && (
-          <Button
-            size="lg"
-            className="h-11 gap-2 px-[18px] font-semibold max-md:hidden"
-            nativeButton={false}
-            render={<Link to="/gymnasts" search={{ add: true }} />}
-          >
-            <Plus className="size-4" strokeWidth={2.5} /> Add gymnast
-          </Button>
-        )}
       </div>
 
-      {data.myGroups.length > 0 && <ViewBar data={data} />}
+      {data.hasGroups && <ViewBar data={data} />}
 
       {/* Sized by the content area, not the window, since the sidebar takes
-          part of it. Wide: competitions and progress on the left, injuries
-          and targets in a narrower column on the right. Narrower: injuries
-          and targets come first, side by side when there is room. */}
+          part of it. Wide: competitions and groups on the left, injuries and
+          the newest gymnasts in a narrower column on the right. Narrower: one
+          column in that order, with injuries and the newest gymnasts side by
+          side when there is room. */}
       <div className="@container">
         <div className="grid gap-4 md:gap-5 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl:items-start">
-          <div className="grid gap-4 md:gap-5 @xl:grid-cols-2 @4xl:col-start-2 @4xl:row-start-1 @4xl:grid-cols-1">
-            <Injuries data={data} />
-            <Targets data={data} />
-          </div>
-          <div className="flex flex-col gap-4 md:gap-5 @4xl:col-start-1 @4xl:row-start-1">
+          <div className="flex flex-col gap-4 md:gap-5">
             <Competitions data={data} />
-            <RecentProgress data={data} />
+            <Groups data={data} />
+          </div>
+          <div className="grid gap-4 md:gap-5 @xl:grid-cols-2 @xl:items-start @4xl:grid-cols-1">
+            <Injuries data={data} />
+            <NewestGymnasts data={data} />
           </div>
         </div>
       </div>
-
-      {canEdit && (
-        <Link
-          to="/gymnasts"
-          search={{ add: true }}
-          aria-label="Add gymnast"
-          className="fixed right-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-30 flex size-14 items-center justify-center rounded-[18px] bg-primary text-white shadow-[0_6px_18px_rgb(11_31_61/0.35)] md:hidden"
-        >
-          <Plus className="size-6" strokeWidth={2.5} />
-        </Link>
-      )}
     </div>
   )
 }
