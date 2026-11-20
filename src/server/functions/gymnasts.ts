@@ -1,21 +1,28 @@
 // Gymnast profiles: list, detail page data, create/edit, archive, delete.
 import { createServerFn } from "@tanstack/react-start"
+import { z } from "zod"
 import { requireRole } from "../auth"
-import { all, get, run } from "../db"
-import { hasRole } from "@/lib/domain"
+import { all, get, run, tx } from "../db"
+import { MAX, check, id, optionalDate, optionalText, text } from "../check"
+import {
+  changedDetail,
+  changedFields,
+  gymnastName,
+  logActivity,
+} from "../activity"
+import { hasRole, today } from "@/lib/domain"
 import type {
+  Activity,
   Group,
   Gymnast,
   GymnastEntry,
   GymnastSkill,
   GymnastSummary,
   Note,
-  SkillNote,
   Skill,
-  SkillHistory,
+  SkillNote,
   Target,
 } from "@/lib/domain"
-import { input, blank } from "./util"
 
 export const listGymnasts = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -41,10 +48,13 @@ export const listGymnasts = createServerFn({ method: "GET" }).handler(
 )
 
 export const getGymnast = createServerFn({ method: "GET" })
-  .validator(input<number>())
-  .handler(async ({ data: id }) => {
+  .validator(check(id("Gymnast not found")))
+  .handler(async ({ data: gymnastId }) => {
     const user = requireRole("viewer")
-    const gymnast = get<Gymnast>("SELECT * FROM gymnasts WHERE id = ?", id)
+    const gymnast = get<Gymnast>(
+      "SELECT * FROM gymnasts WHERE id = ?",
+      gymnastId
+    )
     if (!gymnast) throw new Error("Gymnast not found")
     // Viewers (e.g. volunteers) don't see personal contact or medical details.
     if (!hasRole(user, "coach")) {
@@ -56,99 +66,145 @@ export const getGymnast = createServerFn({ method: "GET" })
       skills: all<Skill>("SELECT * FROM skills ORDER BY sort_order, name"),
       gymnastSkills: all<GymnastSkill>(
         "SELECT skill_id, status, updated_at, updated_by, note FROM gymnast_skills WHERE gymnast_id = ?",
-        id
+        gymnastId
       ),
-      history: all<SkillHistory>(
-        `SELECT h.*, s.name AS skill_name FROM skill_history h JOIN skills s ON s.id = h.skill_id
-         WHERE h.gymnast_id = ? ORDER BY h.recorded_on DESC, h.id DESC LIMIT 50`,
-        id
+      // Everything done to this gymnast's records, and who did it.
+      activity: all<Activity>(
+        "SELECT * FROM activity WHERE gymnast_id = ? ORDER BY at DESC, id DESC LIMIT 200",
+        gymnastId
       ),
       notes: all<Note>(
         "SELECT * FROM notes WHERE gymnast_id = ? ORDER BY noted_on DESC, id DESC",
-        id
+        gymnastId
       ),
       skillNotes: all<SkillNote>(
         `SELECT * FROM skill_notes WHERE gymnast_id = ?
          ORDER BY archived, CASE kind WHEN 'focus' THEN 0 ELSE 1 END, noted_on DESC, id DESC`,
-        id
+        gymnastId
       ),
       targets: all<Target>(
         `SELECT t.*, s.name AS skill_name FROM targets t LEFT JOIN skills s ON s.id = t.skill_id
          WHERE t.gymnast_id = ?
          ORDER BY CASE t.status WHEN 'active' THEN 0 ELSE 1 END, t.target_date IS NULL, t.target_date`,
-        id
+        gymnastId
       ),
       entries: all<GymnastEntry>(
         `SELECT e.id, e.competition_id, c.name AS competition_name, c.start_date, e.category,
                 e.status, e.score, e.placing
          FROM competition_entries e JOIN competitions c ON c.id = e.competition_id
          WHERE e.gymnast_id = ? ORDER BY c.start_date DESC`,
-        id
+        gymnastId
       ),
       groups: all<Group & { member: number }>(
         `SELECT gr.*, EXISTS (SELECT 1 FROM group_members m WHERE m.group_id = gr.id AND m.gymnast_id = ?) AS member
          FROM club_groups gr ORDER BY gr.name`,
-        id
+        gymnastId
       ),
     }
   })
 
-export type GymnastInput = {
-  id?: number
-  first_name: string
-  last_name: string
-  date_of_birth?: string | null
-  squad?: string | null
-  level?: string | null
-  guardian_contact?: string | null
-  medical_info?: string | null
+const gymnastInput = z.object({
+  id: id().optional(),
+  first_name: text("First name", MAX.name),
+  last_name: text("Last name", MAX.name),
+  date_of_birth: optionalDate("Date of birth").refine(
+    (d) => !d || d <= today(),
+    "Date of birth can't be in the future"
+  ),
+  squad: optionalText("Squad", MAX.short),
+  level: optionalText("Level", MAX.short),
+  guardian_contact: optionalText("Contact", MAX.contact),
+  medical_info: optionalText("Medical info", MAX.text),
+})
+export type GymnastInput = z.input<typeof gymnastInput>
+
+// Field names for the log. Values aren't logged, so viewers who can read a
+// gymnast's history never see contact or medical details.
+const GYMNAST_FIELDS = {
+  first_name: "first name",
+  last_name: "last name",
+  date_of_birth: "date of birth",
+  squad: "squad",
+  level: "level",
+  guardian_contact: "contact details",
+  medical_info: "medical info",
 }
 
 export const saveGymnast = createServerFn({ method: "POST" })
-  .validator(input<GymnastInput>())
+  .validator(check(gymnastInput))
   .handler(async ({ data: d }) => {
-    requireRole("coach")
-    if (!d.first_name.trim() || !d.last_name.trim())
-      throw new Error("Name is required")
+    const user = requireRole("coach")
     const vals = [
-      d.first_name.trim(),
-      d.last_name.trim(),
-      blank(d.date_of_birth),
-      blank(d.squad),
-      blank(d.level),
-      blank(d.guardian_contact),
-      blank(d.medical_info),
+      d.first_name,
+      d.last_name,
+      d.date_of_birth,
+      d.squad,
+      d.level,
+      d.guardian_contact,
+      d.medical_info,
     ]
-    if (d.id) {
-      run(
-        `UPDATE gymnasts SET first_name=?, last_name=?, date_of_birth=?, squad=?, level=?,
-         guardian_contact=?, medical_info=? WHERE id=?`,
-        ...vals,
-        d.id
+    const subject = `${d.first_name} ${d.last_name}`
+    return tx(() => {
+      if (d.id) {
+        const before = get<Gymnast>("SELECT * FROM gymnasts WHERE id = ?", d.id)
+        if (!before) throw new Error("Gymnast not found")
+        run(
+          `UPDATE gymnasts SET first_name=?, last_name=?, date_of_birth=?, squad=?, level=?,
+           guardian_contact=?, medical_info=? WHERE id=?`,
+          ...vals,
+          d.id
+        )
+        const changed = changedFields(before, d, GYMNAST_FIELDS)
+        if (changed.length)
+          logActivity(user, "gymnast.edit", "edited the profile", {
+            gymnastId: d.id,
+            subject,
+            detail: changedDetail(changed),
+          })
+        return d.id
+      }
+      const newId = run(
+        `INSERT INTO gymnasts (first_name, last_name, date_of_birth, squad, level, guardian_contact, medical_info)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        ...vals
       )
-      return d.id
-    }
-    return run(
-      `INSERT INTO gymnasts (first_name, last_name, date_of_birth, squad, level, guardian_contact, medical_info)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      ...vals
-    )
+      logActivity(user, "gymnast.add", "added the gymnast", {
+        gymnastId: newId,
+        subject,
+      })
+      return newId
+    })
   })
 
 export const setGymnastActive = createServerFn({ method: "POST" })
-  .validator(input<{ id: number; active: boolean }>())
-  .handler(async ({ data }) => {
-    requireRole("coach")
-    run(
-      "UPDATE gymnasts SET active = ? WHERE id = ?",
-      data.active ? 1 : 0,
-      data.id
+  .validator(check(z.object({ id: id(), active: z.boolean() })))
+  .handler(async ({ data: d }) => {
+    const user = requireRole("coach")
+    const row = get<{ active: number }>(
+      "SELECT active FROM gymnasts WHERE id = ?",
+      d.id
     )
+    if (!row) throw new Error("Gymnast not found")
+    if (Boolean(row.active) === d.active) return
+    tx(() => {
+      run("UPDATE gymnasts SET active = ? WHERE id = ?", d.active ? 1 : 0, d.id)
+      logActivity(
+        user,
+        d.active ? "gymnast.restore" : "gymnast.archive",
+        d.active ? "restored the gymnast" : "archived the gymnast",
+        { gymnastId: d.id, subject: gymnastName(d.id) }
+      )
+    })
   })
 
 export const deleteGymnast = createServerFn({ method: "POST" })
-  .validator(input<number>())
-  .handler(async ({ data: id }) => {
-    requireRole("admin")
-    run("DELETE FROM gymnasts WHERE id = ?", id)
+  .validator(check(id()))
+  .handler(async ({ data: gymnastId }) => {
+    const user = requireRole("admin")
+    const subject = gymnastName(gymnastId)
+    tx(() => {
+      run("DELETE FROM gymnasts WHERE id = ?", gymnastId)
+      // Their own activity goes with them; this record of the deletion stays.
+      logActivity(user, "gymnast.delete", "deleted the gymnast", { subject })
+    })
   })

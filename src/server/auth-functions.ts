@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start"
+import { z } from "zod"
 import { all, get, run, tx } from "./db"
 import {
   AuthError,
@@ -16,6 +17,8 @@ import {
   verifyAgainstDummy,
   verifyPassword,
 } from "./auth"
+import { MAX, check, id, oneOf, text } from "./check"
+import { article, logActivity } from "./activity"
 import {
   TEST_ACCOUNTS,
   TEST_LOGIN_ENABLED,
@@ -24,30 +27,30 @@ import {
 import {
   MIN_PASSWORD_LENGTH,
   ROLES,
+  labelFor,
   type Role,
   type UserRow,
 } from "@/lib/domain"
 
-const input =
-  <T>() =>
-  (d: T) =>
-    d
+/** A new password. Not trimmed: spaces are allowed in passwords. */
+const newPassword = z
+  .string()
+  .min(
+    MIN_PASSWORD_LENGTH,
+    `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
+  )
+  .max(MAX.password, `Password must be ${MAX.password} characters or fewer`)
 
-function checkPassword(pw: string) {
-  if (pw.length < MIN_PASSWORD_LENGTH)
-    throw new Error(
-      `Password must be at least ${MIN_PASSWORD_LENGTH} characters`
-    )
-}
-function checkRole(role: string): asserts role is Role {
-  if (!ROLES.some((r) => r.value === role)) throw new Error("Unknown role")
-}
-function cleanEmail(email: string) {
-  const e = email.trim().toLowerCase()
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
-    throw new Error("Enter a valid email address")
-  return e
-}
+/** A password being checked, which only needs to be a sensible size. */
+const givenPassword = z.string().max(MAX.password)
+
+/** An email address, trimmed and lower-cased. */
+const email = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(MAX.email, `Email must be ${MAX.email} characters or fewer`)
+  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Enter a valid email address")
 
 const userCount = () => get<{ n: number }>("SELECT count(*) AS n FROM users")!.n
 const adminCount = () =>
@@ -86,16 +89,15 @@ export const listTestAccounts = createServerFn({ method: "GET" }).handler(
 )
 
 export const testLogin = createServerFn({ method: "POST" })
-  .validator(input<string>())
-  .handler(async ({ data }) => {
+  .validator(check(z.string().trim().toLowerCase().max(MAX.email)))
+  .handler(async ({ data: account }) => {
     if (!TEST_LOGIN_ENABLED)
       throw new AuthError("Test accounts are only available in development")
-    const email = data.trim().toLowerCase()
-    if (!TEST_ACCOUNTS.some((a) => a.email === email))
+    if (!TEST_ACCOUNTS.some((a) => a.email === account))
       throw new AuthError("Not a test account")
     const user = get<{ id: number }>(
       "SELECT id FROM users WHERE email = ? AND active = 1",
-      email
+      account
     )
     if (!user) throw new AuthError("That test account is deactivated")
     endSession()
@@ -104,51 +106,62 @@ export const testLogin = createServerFn({ method: "POST" })
 
 export const createFirstAdmin = createServerFn({ method: "POST" })
   .validator(
-    input<{
-      setupCode: string
-      name: string
-      email: string
-      password: string
-    }>()
+    check(
+      z.object({
+        setupCode: z.string().max(200),
+        name: text("Name", MAX.name, "Enter your name"),
+        email,
+        password: newPassword,
+      })
+    )
   )
   .handler(async ({ data: d }) => {
     // Only someone who can see the server (its log or its settings) can
     // create the first admin.
     checkSetupCode(d.setupCode)
-    checkPassword(d.password)
-    const email = cleanEmail(d.email)
-    if (!d.name.trim()) throw new Error("Enter your name")
-    const id = tx(() => {
+    const userId = tx(() => {
       // Checked inside the transaction so setup can only ever happen once.
       if (userCount() > 0)
         throw new AuthError("Setup has already been completed")
-      return run(
+      const newId = run(
         "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')",
-        d.name.trim(),
-        email,
+        d.name,
+        d.email,
         hashPassword(d.password)
       )
+      logActivity(
+        { id: newId, name: d.name },
+        "user.setup",
+        "set up the club as its first admin"
+      )
+      return newId
     })
-    startSession(id)
+    startSession(userId)
   })
 
 export const login = createServerFn({ method: "POST" })
-  .validator(input<{ email: string; password: string }>())
+  .validator(
+    check(
+      z.object({
+        email: z.string().trim().toLowerCase().max(MAX.email),
+        password: givenPassword,
+      })
+    )
+  )
   .handler(async ({ data: d }) => {
-    const email = d.email.trim().toLowerCase()
-    checkLockout(email)
+    checkLockout(d.email)
     const user = get<{ id: number; password_hash: string; active: number }>(
       "SELECT id, password_hash, active FROM users WHERE email = ?",
-      email
+      d.email
     )
     const ok = user
       ? verifyPassword(d.password, user.password_hash)
       : (verifyAgainstDummy(d.password), false)
     if (!user || !ok || !user.active) {
-      recordFailure(email)
+      recordFailure(d.email)
       throw new AuthError("Incorrect email or password")
     }
-    clearFailures(email)
+    clearFailures(d.email)
     startSession(user.id)
   })
 
@@ -157,7 +170,7 @@ export const logout = createServerFn({ method: "POST" }).handler(async () => {
 })
 
 export const changeOwnPassword = createServerFn({ method: "POST" })
-  .validator(input<{ current: string; next: string }>())
+  .validator(check(z.object({ current: givenPassword, next: newPassword })))
   .handler(async ({ data: d }) => {
     const me = requireRole("viewer")
     const row = get<{ password_hash: string }>(
@@ -166,12 +179,14 @@ export const changeOwnPassword = createServerFn({ method: "POST" })
     )!
     if (!verifyPassword(d.current, row.password_hash))
       throw new Error("Current password is incorrect")
-    checkPassword(d.next)
-    run(
-      "UPDATE users SET password_hash = ? WHERE id = ?",
-      hashPassword(d.next),
-      me.id
-    )
+    tx(() => {
+      run(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        hashPassword(d.next),
+        me.id
+      )
+      logActivity(me, "user.own-password", "changed their own password")
+    })
     endAllSessionsFor(me.id, true) // sign out other devices
   })
 
@@ -184,35 +199,55 @@ export const listUsers = createServerFn({ method: "GET" }).handler(async () => {
   )
 })
 
+const roleName = (role: Role) => labelFor(ROLES, role).toLowerCase()
+
 export const createUser = createServerFn({ method: "POST" })
   .validator(
-    input<{ name: string; email: string; role: string; password: string }>()
+    check(
+      z.object({
+        name: text("Name", MAX.name, "Enter a name"),
+        email,
+        role: oneOf(ROLES),
+        password: newPassword,
+      })
+    )
   )
   .handler(async ({ data: d }) => {
-    requireRole("admin")
-    checkRole(d.role)
-    checkPassword(d.password)
-    const email = cleanEmail(d.email)
-    if (!d.name.trim()) throw new Error("Enter a name")
-    if (get("SELECT 1 FROM users WHERE email = ?", email))
+    const me = requireRole("admin")
+    if (get("SELECT 1 FROM users WHERE email = ?", d.email))
       throw new Error("There's already a user with that email")
-    return run(
-      "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
-      d.name.trim(),
-      email,
-      hashPassword(d.password),
-      d.role
-    )
+    return tx(() => {
+      const userId = run(
+        "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+        d.name,
+        d.email,
+        hashPassword(d.password),
+        d.role
+      )
+      logActivity(
+        me,
+        "user.add",
+        `added ${d.name} as ${article(roleName(d.role))}`
+      )
+      return userId
+    })
   })
 
 export const updateUser = createServerFn({ method: "POST" })
   .validator(
-    input<{ id: number; role?: string; active?: boolean; password?: string }>()
+    check(
+      z.object({
+        id: id(),
+        role: oneOf(ROLES).optional(),
+        active: z.boolean().optional(),
+        password: newPassword.optional(),
+      })
+    )
   )
   .handler(async ({ data: d }) => {
     const me = requireRole("admin")
-    const target = get<{ role: Role; active: number }>(
-      "SELECT role, active FROM users WHERE id = ?",
+    const target = get<{ name: string; role: Role; active: number }>(
+      "SELECT name, role, active FROM users WHERE id = ?",
       d.id
     )
     if (!target) throw new Error("User not found")
@@ -231,14 +266,26 @@ export const updateUser = createServerFn({ method: "POST" })
         "You can't remove your own admin access — ask another admin"
       )
 
+    const name = target.name
     tx(() => {
-      if (d.role !== undefined) {
-        checkRole(d.role)
+      if (d.role !== undefined && d.role !== target.role) {
         run("UPDATE users SET role = ? WHERE id = ?", d.role, d.id)
+        logActivity(
+          me,
+          "user.role",
+          `changed ${name}'s role to ${labelFor(ROLES, d.role)}`
+        )
       }
-      if (d.active !== undefined) {
+      if (d.active !== undefined && d.active !== Boolean(target.active)) {
         run("UPDATE users SET active = ? WHERE id = ?", d.active ? 1 : 0, d.id)
         if (!d.active) endAllSessionsFor(d.id)
+        logActivity(
+          me,
+          d.active ? "user.reactivate" : "user.deactivate",
+          d.active
+            ? `reactivated ${name}'s account`
+            : `deactivated ${name}'s account`
+        )
       }
       // Only active coaches and admins can be a group's primary coach.
       if (d.role === "viewer" || d.active === false)
@@ -246,14 +293,14 @@ export const updateUser = createServerFn({ method: "POST" })
           "UPDATE club_groups SET primary_coach_id = NULL WHERE primary_coach_id = ?",
           d.id
         )
-      if (d.password) {
-        checkPassword(d.password)
+      if (d.password !== undefined) {
         run(
           "UPDATE users SET password_hash = ? WHERE id = ?",
           hashPassword(d.password),
           d.id
         )
         endAllSessionsFor(d.id, d.id === me.id)
+        logActivity(me, "user.password", `reset ${name}'s password`)
       }
     })
   })

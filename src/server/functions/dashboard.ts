@@ -2,8 +2,10 @@
 // Coaches who are a group's primary coach see their groups' gymnasts by
 // default ("My groups"), and can switch to the whole club.
 import { createServerFn } from "@tanstack/react-start"
+import { z } from "zod"
 import { requireRole } from "../auth"
 import { all, get } from "../db"
+import { check } from "../check"
 import { today } from "@/lib/domain"
 import type {
   CompetitionSummary,
@@ -12,7 +14,6 @@ import type {
   SkillHistory,
   Target,
 } from "@/lib/domain"
-import { input } from "./util"
 
 export type DashboardView = "mine" | "all"
 
@@ -24,7 +25,7 @@ export type MyGroup = {
 }
 
 export const getDashboard = createServerFn({ method: "GET" })
-  .validator(input<{ view?: DashboardView }>())
+  .validator(check(z.object({ view: z.enum(["mine", "all"]).optional() })))
   .handler(async ({ data: d }) => {
     const user = requireRole("viewer")
     const t = today()

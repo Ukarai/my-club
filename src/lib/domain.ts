@@ -238,6 +238,10 @@ export type Target = {
   target_date: string | null
   status: TargetStatus
   achieved_on: string | null
+  /** Who set the target (null for older records) */
+  created_by: string | null
+  /** Who marked it achieved or dropped, or whose skill update achieved it */
+  closed_by: string | null
 }
 
 export type Competition = {
@@ -288,6 +292,29 @@ export type GymnastEntry = {
   score: number | null
   placing: number | null
 }
+
+/** One change made in the app: who did it, when, and what. */
+export type Activity = {
+  id: number
+  /** ISO timestamp, or a plain date for rows copied from older skill history */
+  at: string
+  user_id: number | null
+  /** Their name at the time (null when it wasn't recorded) */
+  user_name: string | null
+  /** Area and verb, e.g. "note.add" */
+  action: string
+  /** What they did, written to follow their name: "added an injury note" */
+  summary: string
+  detail: string | null
+  /** The gymnast, competition or group it was about, as named at the time */
+  subject: string | null
+  gymnast_id: number | null
+  competition_id: number | null
+  group_id: number | null
+}
+
+/** How many activity rows the Activity page shows at a time. */
+export const ACTIVITY_PAGE_SIZE = 100
 
 export type CompTask = {
   id: number

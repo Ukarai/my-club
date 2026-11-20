@@ -1,12 +1,13 @@
 // Demo data for trying the app out on an empty database.
 import { createServerFn } from "@tanstack/react-start"
 import { requireRole } from "../auth"
-import { get, run, tx } from "../db"
+import { SKILL_HISTORY_TO_ACTIVITY, db, get, run, tx } from "../db"
+import { logActivity } from "../activity"
 import type { SkillStatus } from "@/lib/domain"
 
 export const loadDemoData = createServerFn({ method: "POST" }).handler(
   async () => {
-    requireRole("admin")
+    const user = requireRole("admin")
     const { n } = get<{ n: number }>("SELECT count(*) AS n FROM gymnasts")!
     if (n > 0)
       throw new Error("Demo data can only be loaded into an empty club")
@@ -279,6 +280,10 @@ export const loadDemoData = createServerFn({ method: "POST" }).handler(
         "Home gym",
         "Club"
       )
+
+      // Show the demo's skill progress in each gymnast's history.
+      db().exec(SKILL_HISTORY_TO_ACTIVITY)
+      logActivity(user, "demo.load", "loaded the demo data")
     })
   }
 )

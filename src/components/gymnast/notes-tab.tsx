@@ -17,13 +17,12 @@ import {
   useAction,
 } from "@/components/form"
 import { NOTE_CATEGORIES, formatDate, today } from "@/lib/domain"
-import { useCan, useUser } from "@/lib/use-user"
+import { useCan } from "@/lib/use-user"
 import type { GymnastData } from "./data"
 
 export function NotesTab({ data }: { data: GymnastData }) {
   const router = useRouter()
   const canEdit = useCan("coach")
-  const user = useUser()
   const formRef = React.useRef<HTMLFormElement>(null)
   const [category, setCategory] = React.useState<string>("all")
 
@@ -35,7 +34,6 @@ export function NotesTab({ data }: { data: GymnastData }) {
         noted_on: v.noted_on,
         category: v.category,
         body: v.body,
-        author: v.author,
       },
     })
     form.reset()
@@ -100,14 +98,6 @@ export function NotesTab({ data }: { data: GymnastData }) {
                   placeholder="e.g. Rolled ankle on landing — rest from twisting this week"
                 />
               </Field>
-              <Field label="Coach" htmlFor="author">
-                <Input
-                  id="author"
-                  name="author"
-                  placeholder="Optional"
-                  defaultValue={user?.name}
-                />
-              </Field>
               <FormError error={add.error} />
               <Button type="submit" disabled={add.pending}>
                 {add.pending ? "Saving…" : "Add note"}
@@ -151,7 +141,7 @@ export function NotesTab({ data }: { data: GymnastData }) {
                 </span>
                 {n.author && (
                   <span className="text-xs text-muted-foreground">
-                    · {n.author}
+                    · by {n.author}
                   </span>
                 )}
                 {n.category === "injury" && (

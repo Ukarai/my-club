@@ -582,7 +582,7 @@ function SkillNoteItem({
           </span>
           <span>
             {formatDate(note.noted_on)}
-            {note.author && ` · ${note.author}`}
+            {note.author && ` · by ${note.author}`}
             {note.archived ? " · done" : ""}
           </span>
         </div>

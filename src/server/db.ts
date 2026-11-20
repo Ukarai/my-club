@@ -2,6 +2,7 @@ import { DatabaseSync, type SQLInputValue } from "node:sqlite"
 import { mkdirSync } from "node:fs"
 import { dirname, resolve } from "node:path"
 import { SKILL_SEED, TARIFF_UPDATES_2025 } from "./seed"
+import { SKILL_STATUSES } from "@/lib/domain"
 
 const DB_PATH = resolve(process.env.CLUB_DB_PATH ?? "data/club.db")
 
@@ -106,7 +107,10 @@ CREATE TABLE IF NOT EXISTS targets (
   goal_status TEXT,
   target_date TEXT,
   status TEXT NOT NULL DEFAULT 'active',
-  achieved_on TEXT
+  achieved_on TEXT,
+  created_by TEXT,
+  -- Who marked it achieved or dropped (or whose skill update achieved it)
+  closed_by TEXT
 );
 
 CREATE TABLE IF NOT EXISTS competitions (
@@ -176,6 +180,25 @@ CREATE TABLE IF NOT EXISTS competition_tasks (
   assignee TEXT,
   done INTEGER NOT NULL DEFAULT 0
 );
+
+-- Who did what, and when: a row for every change made in the app. A
+-- gymnast's rows go when the gymnast is deleted; rows about a deleted
+-- competition or group stay, named by subject.
+CREATE TABLE IF NOT EXISTS activity (
+  id INTEGER PRIMARY KEY,
+  at TEXT NOT NULL,          -- ISO timestamp (a plain date for copied skill history)
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  user_name TEXT,            -- their name at the time; NULL when not recorded
+  action TEXT NOT NULL,      -- area.verb, e.g. 'note.add'
+  summary TEXT NOT NULL,     -- what they did, read after their name
+  detail TEXT,
+  subject TEXT,              -- gymnast, competition or group name at the time
+  gymnast_id INTEGER REFERENCES gymnasts(id) ON DELETE CASCADE,
+  competition_id INTEGER REFERENCES competitions(id) ON DELETE SET NULL,
+  group_id INTEGER REFERENCES club_groups(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS activity_at ON activity (at);
+CREATE INDEX IF NOT EXISTS activity_gymnast ON activity (gymnast_id, at);
 `
 
 function open() {
@@ -259,7 +282,33 @@ function migrate(conn: DatabaseSync) {
     )
     conn.exec("PRAGMA user_version = 4")
   }
+  if (version < 5) {
+    // Who set and closed each target, and the activity log (SCHEMA creates
+    // it). Earlier skill history is copied in so it isn't lost from view.
+    addColumn(conn, "targets", "created_by", "TEXT")
+    addColumn(conn, "targets", "closed_by", "TEXT")
+    conn.exec(SKILL_HISTORY_TO_ACTIVITY)
+    conn.exec("PRAGMA user_version = 5")
+  }
 }
+
+/**
+ * Copies skill_history into the activity log, dated by when each change was
+ * recorded. Used once by the migration above and by the demo data loader.
+ */
+export const SKILL_HISTORY_TO_ACTIVITY = `
+INSERT INTO activity (at, user_name, action, summary, detail, subject, gymnast_id)
+SELECT h.recorded_on, h.recorded_by, 'skill.status',
+  CASE h.status
+    WHEN 'cleared' THEN 'cleared ' || s.name
+    ${SKILL_STATUSES.map((st) => `WHEN '${st.value}' THEN 'set ' || s.name || ' to ${st.label}'`).join(" ")}
+    ELSE 'set ' || s.name || ' to ' || h.status
+  END,
+  h.note, g.first_name || ' ' || g.last_name, h.gymnast_id
+FROM skill_history h
+JOIN skills s ON s.id = h.skill_id
+JOIN gymnasts g ON g.id = h.gymnast_id
+ORDER BY h.recorded_on, h.id`
 
 const g = globalThis as unknown as { __clubDb?: DatabaseSync }
 

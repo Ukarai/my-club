@@ -164,14 +164,15 @@ export function TargetsTab({ data }: { data: GymnastData }) {
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {t.status === "achieved"
-                      ? `Achieved ${formatDate(t.achieved_on)}`
+                      ? `Achieved ${formatDate(t.achieved_on)}${t.closed_by ? ` by ${t.closed_by}` : ""}`
                       : t.status === "dropped"
-                        ? "Dropped"
+                        ? `Dropped${t.closed_by ? ` by ${t.closed_by}` : ""}`
                         : t.target_date
                           ? days! < 0
                             ? `${-days!} days overdue (${formatDate(t.target_date)})`
                             : `Due ${formatDate(t.target_date)} · ${days} days`
                           : "No date"}
+                    {t.created_by && ` · set by ${t.created_by}`}
                   </div>
                 </div>
                 <div className={cn("flex gap-1", !canEdit && "hidden")}>

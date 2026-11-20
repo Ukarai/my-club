@@ -1,15 +1,23 @@
 // Custom groups of gymnasts and their membership.
 import { createServerFn } from "@tanstack/react-start"
+import { z } from "zod"
 import { requireRole } from "../auth"
 import { all, get, run, tx } from "../db"
+import { MAX, check, id, optionalText, text } from "../check"
+import {
+  changedDetail,
+  changedFields,
+  gymnastName,
+  logActivity,
+} from "../activity"
 import { GROUP_COLORS, hasRole, today } from "@/lib/domain"
 import type {
   CoachOption,
+  Group,
   GroupSummary,
   GroupWithCoach,
   Gymnast,
 } from "@/lib/domain"
-import { input, blank } from "./util"
 
 export const listGroups = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -49,14 +57,14 @@ export type GroupMember = {
 }
 
 export const getGroup = createServerFn({ method: "GET" })
-  .validator(input<number>())
-  .handler(async ({ data: id }) => {
+  .validator(check(id("Group not found")))
+  .handler(async ({ data: groupId }) => {
     requireRole("viewer")
     const group = get<GroupWithCoach>(
       `SELECT gr.*, u.name AS primary_coach_name
        FROM club_groups gr LEFT JOIN users u ON u.id = gr.primary_coach_id
        WHERE gr.id = ?`,
-      id
+      groupId
     )
     if (!group) throw new Error("Group not found")
     return {
@@ -68,7 +76,7 @@ export const getGroup = createServerFn({ method: "GET" })
           (SELECT count(*) FROM notes n WHERE n.gymnast_id = g.id AND n.category = 'injury' AND n.resolved = 0) AS open_injuries
          FROM group_members m JOIN gymnasts g ON g.id = m.gymnast_id
          WHERE m.group_id = ? ORDER BY g.active DESC, g.last_name, g.first_name`,
-        id
+        groupId
       ),
       gymnasts: all<Pick<Gymnast, "id" | "first_name" | "last_name" | "squad">>(
         "SELECT id, first_name, last_name, squad FROM gymnasts WHERE active = 1 ORDER BY last_name, first_name"
@@ -76,100 +84,169 @@ export const getGroup = createServerFn({ method: "GET" })
     }
   })
 
-export type GroupInput = {
-  id?: number
-  name: string
-  description?: string | null
-  color?: string | null
+const groupInput = z.object({
+  id: id().optional(),
+  name: text("Name", MAX.name, "Group needs a name"),
+  description: optionalText("Description", MAX.description),
+  color: z
+    .string()
+    .pipe(z.enum(GROUP_COLORS))
+    .nullish()
+    .transform((c) => c ?? "sky"),
   /** Admins only. Leave undefined to keep the current coach. */
-  primaryCoachId?: number | null
+  primaryCoachId: id().nullable().optional(),
+})
+export type GroupInput = z.input<typeof groupInput>
+
+const GROUP_FIELDS = {
+  name: "name",
+  description: "description",
+  color: "colour",
+}
+
+function groupSubject(groupId: number) {
+  const g = get<{ name: string }>(
+    "SELECT name FROM club_groups WHERE id = ?",
+    groupId
+  )
+  if (!g) throw new Error("Group not found")
+  return g.name
 }
 
 export const saveGroup = createServerFn({ method: "POST" })
-  .validator(input<GroupInput>())
+  .validator(check(groupInput))
   .handler(async ({ data: d }) => {
     const user = requireRole("coach")
-    const name = d.name.trim()
-    if (!name) throw new Error("Group needs a name")
     const coachId = d.primaryCoachId
+    let coachName: string | null = null
     if (coachId !== undefined) {
       if (!hasRole(user, "admin"))
         throw new Error("Only an admin can choose a group's primary coach")
-      if (
-        coachId !== null &&
-        !get(
-          "SELECT 1 FROM users WHERE id = ? AND active = 1 AND role IN ('coach', 'admin')",
+      if (coachId !== null) {
+        const coach = get<{ name: string }>(
+          "SELECT name FROM users WHERE id = ? AND active = 1 AND role IN ('coach', 'admin')",
           coachId
         )
-      )
-        throw new Error("Choose an active coach")
+        if (!coach) throw new Error("Choose an active coach")
+        coachName = coach.name
+      }
     }
-    const color = GROUP_COLORS.find((c) => c === d.color) ?? "sky"
     const clash = get<{ id: number }>(
       "SELECT id FROM club_groups WHERE name = ? AND id != ?",
-      name,
+      d.name,
       d.id ?? 0
     )
-    if (clash) throw new Error(`There's already a group called "${name}"`)
-    if (d.id) {
-      const id = d.id
-      tx(() => {
+    if (clash) throw new Error(`There's already a group called "${d.name}"`)
+    return tx(() => {
+      if (d.id) {
+        const groupId = d.id
+        const before = get<Group>(
+          "SELECT * FROM club_groups WHERE id = ?",
+          groupId
+        )
+        if (!before) throw new Error("Group not found")
         run(
           "UPDATE club_groups SET name = ?, description = ?, color = ? WHERE id = ?",
-          name,
-          blank(d.description),
-          color,
-          id
+          d.name,
+          d.description,
+          d.color,
+          groupId
         )
-        if (coachId !== undefined)
+        const log = { groupId, subject: d.name }
+        const changed = changedFields(before, d, GROUP_FIELDS)
+        if (changed.length)
+          logActivity(user, "group.edit", "edited the group", {
+            ...log,
+            detail: changedDetail(changed),
+          })
+        if (coachId !== undefined && coachId !== before.primary_coach_id) {
           run(
             "UPDATE club_groups SET primary_coach_id = ? WHERE id = ?",
             coachId,
-            id
+            groupId
           )
+          logActivity(
+            user,
+            "group.coach",
+            coachName
+              ? `made ${coachName} the primary coach`
+              : "removed the primary coach",
+            log
+          )
+        }
+        return groupId
+      }
+      const groupId = run(
+        "INSERT INTO club_groups (name, description, color, primary_coach_id) VALUES (?, ?, ?, ?)",
+        d.name,
+        d.description,
+        d.color,
+        coachId ?? null
+      )
+      logActivity(user, "group.add", "created the group", {
+        groupId,
+        subject: d.name,
+        detail: coachName ? `Primary coach: ${coachName}` : null,
       })
-      return id
-    }
-    return run(
-      "INSERT INTO club_groups (name, description, color, primary_coach_id) VALUES (?, ?, ?, ?)",
-      name,
-      blank(d.description),
-      color,
-      coachId ?? null
-    )
+      return groupId
+    })
   })
 
 export const deleteGroup = createServerFn({ method: "POST" })
-  .validator(input<number>())
-  .handler(async ({ data: id }) => {
-    requireRole("coach")
-    // Members are only unlinked (ON DELETE CASCADE); gymnasts are untouched.
-    run("DELETE FROM club_groups WHERE id = ?", id)
+  .validator(check(id()))
+  .handler(async ({ data: groupId }) => {
+    const user = requireRole("coach")
+    const subject = groupSubject(groupId)
+    tx(() => {
+      // Members are only unlinked (ON DELETE CASCADE); gymnasts are untouched.
+      run("DELETE FROM club_groups WHERE id = ?", groupId)
+      logActivity(user, "group.delete", "deleted the group", { subject })
+    })
   })
 
 export const addGroupMembers = createServerFn({ method: "POST" })
-  .validator(input<{ groupId: number; gymnastIds: number[] }>())
+  .validator(
+    check(z.object({ groupId: id(), gymnastIds: z.array(id()).max(500) }))
+  )
   .handler(async ({ data: d }) => {
-    requireRole("coach")
+    const user = requireRole("coach")
+    const group = groupSubject(d.groupId)
     const t = today()
     tx(() => {
-      for (const gid of d.gymnastIds)
-        run(
-          "INSERT INTO group_members (group_id, gymnast_id, added_on) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+      for (const gymnastId of d.gymnastIds) {
+        const subject = gymnastName(gymnastId)
+        const added = get(
+          "INSERT INTO group_members (group_id, gymnast_id, added_on) VALUES (?, ?, ?) ON CONFLICT DO NOTHING RETURNING gymnast_id",
           d.groupId,
-          gid,
+          gymnastId,
           t
         )
+        if (added)
+          logActivity(user, "group.member-add", `added them to ${group}`, {
+            gymnastId,
+            groupId: d.groupId,
+            subject,
+          })
+      }
     })
   })
 
 export const removeGroupMember = createServerFn({ method: "POST" })
-  .validator(input<{ groupId: number; gymnastId: number }>())
+  .validator(check(z.object({ groupId: id(), gymnastId: id() })))
   .handler(async ({ data: d }) => {
-    requireRole("coach")
-    run(
-      "DELETE FROM group_members WHERE group_id = ? AND gymnast_id = ?",
-      d.groupId,
-      d.gymnastId
-    )
+    const user = requireRole("coach")
+    const group = groupSubject(d.groupId)
+    tx(() => {
+      const removed = get(
+        "DELETE FROM group_members WHERE group_id = ? AND gymnast_id = ? RETURNING gymnast_id",
+        d.groupId,
+        d.gymnastId
+      )
+      if (removed)
+        logActivity(user, "group.member-remove", `removed them from ${group}`, {
+          gymnastId: d.gymnastId,
+          groupId: d.groupId,
+          subject: gymnastName(d.gymnastId),
+        })
+    })
   })

@@ -1,6 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router"
 import { Menu } from "@base-ui/react/menu"
 import {
+  History,
   Layers,
   LayoutDashboard,
   ListChecks,
@@ -14,7 +15,7 @@ import type * as React from "react"
 import { logout } from "@/server/auth-functions"
 import { ClubLogo, initials } from "@/components/avatar"
 import { CLUB } from "@/lib/club"
-import { ROLES } from "@/lib/domain"
+import { ROLES, hasRole } from "@/lib/domain"
 import { useUser } from "@/lib/use-user"
 
 const NAV = [
@@ -92,6 +93,12 @@ function Sidebar() {
             {label}
           </Link>
         ))}
+        {hasRole(user, "coach") && (
+          <Link to="/activity" className={sideLink}>
+            <History className="size-[18px]" />
+            Activity
+          </Link>
+        )}
         {user.role === "admin" && (
           <>
             <span className={sectionLabel + " pt-4"}>Admin</span>
@@ -171,6 +178,15 @@ function PhoneHeader() {
               >
                 <UserRound className="size-4" /> Your account
               </Menu.LinkItem>
+              {hasRole(user, "coach") && (
+                <Menu.LinkItem
+                  closeOnClick
+                  className={menuItem}
+                  render={<Link to="/activity" />}
+                >
+                  <History className="size-4" /> Activity
+                </Menu.LinkItem>
+              )}
               {user.role === "admin" && (
                 <Menu.LinkItem
                   closeOnClick
